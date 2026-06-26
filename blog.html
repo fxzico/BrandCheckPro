@@ -47,298 +47,304 @@
 <body 
   class="transition-colors duration-200 font-sans antialiased min-h-screen flex flex-col" 
   :class="darkMode ? 'dark bg-brandBgDark text-slate-100' : 'bg-brandBgLight text-slate-800'"
-  x-data="{ 
-    darkMode: localStorage.getItem('theme') ? (localStorage.getItem('theme') === 'dark') : window.matchMedia('(prefers-color-scheme: dark)').matches, 
-    selectedCategory: 'all', 
-    searchQuery: '', 
-    isLoading: false,
-    privacyModal: false,
-    connectionModal: false,
-    cloudEngineKey: localStorage.getItem('BC_LIVE_CORE_KEY') || '',
-    user: null,
-    authModal: false,
-    userDropdown: false,
-    init() {
-      const existingUser = typeof getAuthUser === 'function' ? getAuthUser() : null;
-      if (existingUser) {
-        this.user = existingUser;
-      }
-      window.addEventListener('gauth:login', (e) => {
-        this.user = e.detail;
-        this.authModal = false;
-      });
-      window.addEventListener('gauth:logout', () => {
-        this.user = null;
-        this.userDropdown = false;
-      });
-    },
-    signOut() {
-      if (typeof signOutUser === 'function') {
-        signOutUser();
-      } else {
-        this.user = null;
-        this.userDropdown = false;
-        window.dispatchEvent(new CustomEvent('gauth:logout'));
-      }
-    },
-    
-    articles: [
-      {
-        id: 1,
-        title: 'The Anatomy of a Modern Ad Recall: What Copywriters Can Learn',
-        category: 'case-studies',
-        categoryLabel: 'Case Study Matrix',
-        summary: 'Explore the structured computational limits separating clever creative wordplay from highly critical cultural fault line exposure inside localized consumer spaces.',
-        readTime: '5 Min Read',
-        image: 'assets/images/blog_featured_graphic.png',
-        url: 'blog/post-mortem-01.html',
-        featured: true
-      },
-      {
-        id: 2,
-        title: 'Case Study: Tanishq Ekatvam Campaign Controversy (2020)',
-        category: 'case-studies',
-        categoryLabel: 'Case Studies',
-        summary: 'Linguistic review mapping the critical metric variances separating acceptable festive copy from structural PR backlash risks in the 2020 Tanishq Ekatvam campaign.',
-        readTime: '6 Min Read',
-        image: null,
-        url: 'blog/tanishq-ekatvam-campaign-controversy-2020.html',
-        featured: false
-      },
-      {
-        id: 3,
-        title: 'Case Study: Manyavar Kanyamaan Campaign Controversy (2021)',
-        category: 'case-studies',
-        categoryLabel: 'Case Studies',
-        summary: 'Linguistic review mapping the critical metric variances separating acceptable festive copy from structural PR backlash risks in the 2021 Manyavar Kanyamaan campaign.',
-        readTime: '5 Min Read',
-        image: null,
-        url: 'blog/manyavar-kanyamaan-campaign-controversy-2021.html',
-        featured: false
-      },
-      {
-        id: 4,
-        title: 'Case Study: Zomato Kachra Campaign Controversy (2023)',
-        category: 'case-studies',
-        categoryLabel: 'Case Studies',
-        summary: 'Linguistic review mapping the critical metric variances separating acceptable festive copy from structural PR backlash risks in the 2023 Zomato Kachra campaign.',
-        readTime: '4 Min Read',
-        image: null,
-        url: 'blog/zomato-kachra-campaign-controversy-2023.html',
-        featured: false
-      },
-      {
-        id: 5,
-        title: 'Case Study: Zomato MC/BC Acronym Controversy (2017)',
-        category: 'linguistic-risk',
-        categoryLabel: 'Linguistic Risk',
-        summary: 'An analysis of Zomato’s outdoor campaign featuring abbreviations of highly offensive Hindi expletives.',
-        readTime: '4 Min Read',
-        image: null,
-        url: 'blog/zomato-acronym-controversy-2017.html',
-        featured: false
-      },
-      {
-        id: 6,
-        title: 'Case Study: Kent RO Domestic Workers Stigmatization (2020)',
-        category: 'cultural-safety',
-        categoryLabel: 'Cultural Safety',
-        summary: 'How an ad for a bread maker stigmatized domestic workers as potential infection vectors.',
-        readTime: '5 Min Read',
-        image: null,
-        url: 'blog/kent-ro-classism-controversy-2020.html',
-        featured: false
-      },
-      {
-        id: 7,
-        title: 'Case Study: FabIndia Urdu Festive Phrasing Backlash (2021)',
-        category: 'cultural-safety',
-        categoryLabel: 'Cultural Safety',
-        summary: 'A look at the controversy over FabIndia using the Urdu phrase "Jashn-e-Riwaaz" to describe a Hindu festive collection.',
-        readTime: '5 Min Read',
-        image: null,
-        url: 'blog/fabindia-urdu-phrasing-2021.html',
-        featured: false
-      },
-      {
-        id: 8,
-        title: 'Case Study: Mohey Hindu Ritual Subversion Debate (2021)',
-        category: 'cultural-safety',
-        categoryLabel: 'Cultural Safety',
-        summary: 'Deconstructing the backlash against Manyavar Mohey’s creative decision to challenge the Kanyadaan ritual.',
-        readTime: '5 Min Read',
-        image: null,
-        url: 'blog/mohey-ritual-subversion-2021.html',
-        featured: false
-      },
-      {
-        id: 9,
-        title: 'Case Study: Dabur Fem Same-Sex Karwa Chauth Ad Controversy (2021)',
-        category: 'linguistic-risk',
-        categoryLabel: 'Linguistic Risk',
-        summary: 'Examining the progressive synthesis failure of a same-sex Karwa Chauth narrative for a bleach brand.',
-        readTime: '5 Min Read',
-        image: null,
-        url: 'blog/dabur-fem-same-sex-karwa-chauth-2021.html',
-        featured: false
-      },
-      {
-        id: 10,
-        title: 'Case Study: Sabyasachi Mangalsutra Eroticized Depiction Backlash (2021)',
-        category: 'linguistic-risk',
-        categoryLabel: 'Linguistic Risk',
-        summary: 'How the luxury designer’s promotional campaign for a Mangalsutra triggered legal threats and boycott calls.',
-        readTime: '5 Min Read',
-        image: null,
-        url: 'blog/sabyasachi-mangalsutra-ad-controversy-2021.html',
-        featured: false
-      },
-      {
-        id: 11,
-        title: 'Case Study: Layer\'s Shot Predatory Indecency Ad Ban (2022)',
-        category: 'linguistic-risk',
-        categoryLabel: 'Linguistic Risk',
-        summary: 'An assessment of the extreme backlash and regulatory ban triggered by Layer’s Shot advertisements simulating gang-rape scenarios.',
-        readTime: '5 Min Read',
-        image: null,
-        url: 'blog/layers-shot-rape-controversy-2022.html',
-        featured: false
-      },
-      {
-        id: 12,
-        title: 'Case Study: Vim Black Failed Satire & Gender Stereotyping (2022)',
-        category: 'cultural-safety',
-        categoryLabel: 'Cultural Safety',
-        summary: 'Deconstructing the failed satire of Vim Black’s campaign and the ensuing gender segregation debate.',
-        readTime: '4 Min Read',
-        image: null,
-        url: 'blog/vim-failed-satire-controversy-2022.html',
-        featured: false
-      },
-      {
-        id: 13,
-        title: 'Case Study: Swiggy Holi Advertisement Contestation (2023)',
-        category: 'cultural-safety',
-        categoryLabel: 'Cultural Safety',
-        summary: 'Analyzing Swiggy’s billboard campaign instructing behavioral changes during Holi and the resulting backlash.',
-        readTime: '5 Min Read',
-        image: null,
-        url: 'blog/swiggy-holi-advertisement-2023.html',
-        featured: false
-      },
-      {
-        id: 14,
-        title: 'Case Study: YesMadam Faked Layoffs Viral Stunt (2024)',
-        category: 'linguistic-risk',
-        categoryLabel: 'Linguistic Risk',
-        summary: 'A look at the professional trust deficit created when YesMadam staged fake mass layoffs as a marketing stunt.',
-        readTime: '4 Min Read',
-        image: null,
-        url: 'blog/yesmadam-faked-layoffs-2024.html',
-        featured: false
-      },
-      {
-        id: 15,
-        title: 'Case Study: Hauterfly Faked Death Awareness Controversy (2024)',
-        category: 'linguistic-risk',
-        categoryLabel: 'Linguistic Risk',
-        summary: 'How staging a celebrity’s fake death for awareness created massive trust deficits and business losses.',
-        readTime: '5 Min Read',
-        image: null,
-        url: 'blog/hauterfly-unethical-deception-2024.html',
-        featured: false
-      },
-      {
-        id: 16,
-        title: 'Case Study: Zomato Pure Veg Fleet & Sociological Segregation (2024)',
-        category: 'cultural-safety',
-        categoryLabel: 'Cultural Safety',
-        summary: 'Analyzing the physical and linguistic segregation controversy of Zomato’s "Pure Veg Fleet" launch.',
-        readTime: '5 Min Read',
-        image: null,
-        url: 'blog/zomato-pure-veg-fleet-2024.html',
-        featured: false
-      },
-      {
-        id: 17,
-        title: 'Case Study: Prada Kolhapuri Design Appropriation (2024)',
-        category: 'cultural-safety',
-        categoryLabel: 'Cultural Safety',
-        summary: 'Evaluating the digital PR backlash Prada faced for selling traditional Kolhapuri sandals with no cultural attribution.',
-        readTime: '4 Min Read',
-        image: null,
-        url: 'blog/prada-kolhapuri-appropriation-2024.html',
-        featured: false
-      },
-      {
-        id: 18,
-        title: 'Case Study: OYO God Placement & Spiritual Misappropriation (2025)',
-        category: 'cultural-safety',
-        categoryLabel: 'Cultural Safety',
-        summary: 'An analysis of OYO’s marketing campaign equating divine intervention with hotel bookings.',
-        readTime: '4 Min Read',
-        image: null,
-        url: 'blog/oyo-spiritual-misappropriation-2025.html',
-        featured: false
-      },
-      {
-        id: 19,
-        title: 'Case Study: Dabur Geopolitical Opportunism Marketing (2025)',
-        category: 'linguistic-risk',
-        categoryLabel: 'Linguistic Risk',
-        summary: 'Analyzing the professional polarization triggered by Dabur’s anti-US geopolitical messaging stunt.',
-        readTime: '4 Min Read',
-        image: null,
-        url: 'blog/dabur-geopolitical-opportunism-2025.html',
-        featured: false
-      },
-      {
-        id: 20,
-        title: 'Case Study: Fenty Beauty Indian Localization Mismatch (2025)',
-        category: 'cultural-safety',
-        categoryLabel: 'Cultural Safety',
-        summary: 'How a lack of local cultural grounding and context-aware marketing created criticism during Fenty Beauty’s India launch.',
-        readTime: '4 Min Read',
-        image: null,
-        url: 'blog/fenty-beauty-localization-failure-2025.html',
-        featured: false
-      },
-      {
-        id: 21,
-        title: 'Case Study: Patanjali Competitor Injunction Controversy (2025)',
-        category: 'linguistic-risk',
-        categoryLabel: 'Linguistic Risk',
-        summary: 'How labeling competitors as "dhoka" led to a Delhi High Court injunction and severe corporate legal damage.',
-        readTime: '5 Min Read',
-        image: null,
-        url: 'blog/patanjali-legal-denigration-2025.html',
-        featured: false
-      },
-      {
-        id: 22,
-        title: 'Case Study: Star Sports Rivalry Belittling Backlash (2026)',
-        category: 'cultural-safety',
-        categoryLabel: 'Cultural Safety',
-        summary: 'How belittling international sports rivals in promos turned an aggressive marketing angle into global humiliation.',
-        readTime: '4 Min Read',
-        image: null,
-        url: 'blog/star-sports-rivalry-mockery-2026.html',
-        featured: false
-      }
-    ],
-    filterArticles() {
-      this.isLoading = true;
-      setTimeout(() => { this.isLoading = false; }, 400);
-    },
-    get filteredList() {
-      return this.articles.filter(article => {
-        const matchesCategory = this.selectedCategory === 'all' || article.category === this.selectedCategory;
-        const matchesQuery = article.title.toLowerCase().includes(this.searchQuery.toLowerCase()) || 
-                             article.summary.toLowerCase().includes(this.searchQuery.toLowerCase());
-        return matchesCategory && matchesQuery;
-      });
-    }
-  }"
+  x-data="brandStories"
+>
+
+  <script>
+    document.addEventListener('alpine:init', () => {
+      Alpine.data('brandStories', () => ({
+        darkMode: localStorage.getItem('theme') ? (localStorage.getItem('theme') === 'dark') : window.matchMedia('(prefers-color-scheme: dark)').matches, 
+        selectedCategory: 'all', 
+        searchQuery: '', 
+        isLoading: false,
+        privacyModal: false,
+        connectionModal: false,
+        cloudEngineKey: localStorage.getItem('BC_LIVE_CORE_KEY') || '',
+        user: null,
+        authModal: false,
+        userDropdown: false,
+        init() {
+          const existingUser = typeof getAuthUser === 'function' ? getAuthUser() : null;
+          if (existingUser) {
+            this.user = existingUser;
+          }
+          window.addEventListener('gauth:login', (e) => {
+            this.user = e.detail;
+            this.authModal = false;
+          });
+          window.addEventListener('gauth:logout', () => {
+            this.user = null;
+            this.userDropdown = false;
+          });
+        },
+        signOut() {
+          if (typeof signOutUser === 'function') {
+            signOutUser();
+          } else {
+            this.user = null;
+            this.userDropdown = false;
+            window.dispatchEvent(new CustomEvent('gauth:logout'));
+          }
+        },
+        articles: [
+          {
+            id: 1,
+            title: 'The Anatomy of a Modern Ad Recall: What Copywriters Can Learn',
+            category: 'case-studies',
+            categoryLabel: 'Case Study Matrix',
+            summary: 'Explore the structured computational limits separating clever creative wordplay from highly critical cultural fault line exposure inside localized consumer spaces.',
+            readTime: '5 Min Read',
+            image: 'assets/images/blog_featured_graphic.png',
+            url: 'blog/post-mortem-01.html',
+            featured: true
+          },
+          {
+            id: 2,
+            title: 'Case Study: Tanishq Ekatvam Campaign Controversy (2020)',
+            category: 'case-studies',
+            categoryLabel: 'Case Studies',
+            summary: 'Linguistic review mapping the critical metric variances separating acceptable festive copy from structural PR backlash risks in the 2020 Tanishq Ekatvam campaign.',
+            readTime: '6 Min Read',
+            image: null,
+            url: 'blog/tanishq-ekatvam-campaign-controversy-2020.html',
+            featured: false
+          },
+          {
+            id: 3,
+            title: 'Case Study: Manyavar Kanyamaan Campaign Controversy (2021)',
+            category: 'case-studies',
+            categoryLabel: 'Case Studies',
+            summary: 'Linguistic review mapping the critical metric variances separating acceptable festive copy from structural PR backlash risks in the 2021 Manyavar Kanyamaan campaign.',
+            readTime: '5 Min Read',
+            image: null,
+            url: 'blog/manyavar-kanyamaan-campaign-controversy-2021.html',
+            featured: false
+          },
+          {
+            id: 4,
+            title: 'Case Study: Zomato Kachra Campaign Controversy (2023)',
+            category: 'case-studies',
+            categoryLabel: 'Case Studies',
+            summary: 'Linguistic review mapping the critical metric variances separating acceptable festive copy from structural PR backlash risks in the 2023 Zomato Kachra campaign.',
+            readTime: '4 Min Read',
+            image: null,
+            url: 'blog/zomato-kachra-campaign-controversy-2023.html',
+            featured: false
+          },
+          {
+            id: 5,
+            title: 'Case Study: Zomato MC/BC Acronym Controversy (2017)',
+            category: 'linguistic-risk',
+            categoryLabel: 'Linguistic Risk',
+            summary: 'An analysis of Zomato’s outdoor campaign featuring abbreviations of highly offensive Hindi expletives.',
+            readTime: '4 Min Read',
+            image: null,
+            url: 'blog/zomato-acronym-controversy-2017.html',
+            featured: false
+          },
+          {
+            id: 6,
+            title: 'Case Study: Kent RO Domestic Workers Stigmatization (2020)',
+            category: 'cultural-safety',
+            categoryLabel: 'Cultural Safety',
+            summary: 'How an ad for a bread maker stigmatized domestic workers as potential infection vectors.',
+            readTime: '5 Min Read',
+            image: null,
+            url: 'blog/kent-ro-classism-controversy-2020.html',
+            featured: false
+          },
+          {
+            id: 7,
+            title: 'Case Study: FabIndia Urdu Festive Phrasing Backlash (2021)',
+            category: 'cultural-safety',
+            categoryLabel: 'Cultural Safety',
+            summary: 'A look at the controversy over FabIndia using the Urdu phrase "Jashn-e-Riwaaz" to describe a Hindu festive collection.',
+            readTime: '5 Min Read',
+            image: null,
+            url: 'blog/fabindia-urdu-phrasing-2021.html',
+            featured: false
+          },
+          {
+            id: 8,
+            title: 'Case Study: Mohey Hindu Ritual Subversion Debate (2021)',
+            category: 'cultural-safety',
+            categoryLabel: 'Cultural Safety',
+            summary: 'Deconstructing the backlash against Manyavar Mohey’s creative decision to challenge the Kanyadaan ritual.',
+            readTime: '5 Min Read',
+            image: null,
+            url: 'blog/mohey-ritual-subversion-2021.html',
+            featured: false
+          },
+          {
+            id: 9,
+            title: 'Case Study: Dabur Fem Same-Sex Karwa Chauth Ad Controversy (2021)',
+            category: 'linguistic-risk',
+            categoryLabel: 'Linguistic Risk',
+            summary: 'Examining the progressive synthesis failure of a same-sex Karwa Chauth narrative for a bleach brand.',
+            readTime: '5 Min Read',
+            image: null,
+            url: 'blog/dabur-fem-same-sex-karwa-chauth-2021.html',
+            featured: false
+          },
+          {
+            id: 10,
+            title: 'Case Study: Sabyasachi Mangalsutra Eroticized Depiction Backlash (2021)',
+            category: 'linguistic-risk',
+            categoryLabel: 'Linguistic Risk',
+            summary: 'How the luxury designer’s promotional campaign for a Mangalsutra triggered legal threats and boycott calls.',
+            readTime: '5 Min Read',
+            image: null,
+            url: 'blog/sabyasachi-mangalsutra-ad-controversy-2021.html',
+            featured: false
+          },
+          {
+            id: 11,
+            title: 'Case Study: Layer\'s Shot Predatory Indecency Ad Ban (2022)',
+            category: 'linguistic-risk',
+            categoryLabel: 'Linguistic Risk',
+            summary: 'An assessment of the extreme backlash and regulatory ban triggered by Layer’s Shot advertisements simulating gang-rape scenarios.',
+            readTime: '5 Min Read',
+            image: null,
+            url: 'blog/layers-shot-rape-controversy-2022.html',
+            featured: false
+          },
+          {
+            id: 12,
+            title: 'Case Study: Vim Black Failed Satire & Gender Stereotyping (2022)',
+            category: 'cultural-safety',
+            categoryLabel: 'Cultural Safety',
+            summary: 'Deconstructing the failed satire of Vim Black’s campaign and the ensuing gender segregation debate.',
+            readTime: '4 Min Read',
+            image: null,
+            url: 'blog/vim-failed-satire-controversy-2022.html',
+            featured: false
+          },
+          {
+            id: 13,
+            title: 'Case Study: Swiggy Holi Advertisement Contestation (2023)',
+            category: 'cultural-safety',
+            categoryLabel: 'Cultural Safety',
+            summary: 'Analyzing Swiggy’s billboard campaign instructing behavioral changes during Holi and the resulting backlash.',
+            readTime: '5 Min Read',
+            image: null,
+            url: 'blog/swiggy-holi-advertisement-2023.html',
+            featured: false
+          },
+          {
+            id: 14,
+            title: 'Case Study: YesMadam Faked Layoffs Viral Stunt (2024)',
+            category: 'linguistic-risk',
+            categoryLabel: 'Linguistic Risk',
+            summary: 'A look at the professional trust deficit created when YesMadam staged fake mass layoffs as a marketing stunt.',
+            readTime: '4 Min Read',
+            image: null,
+            url: 'blog/yesmadam-faked-layoffs-2024.html',
+            featured: false
+          },
+          {
+            id: 15,
+            title: 'Case Study: Hauterfly Faked Death Awareness Controversy (2024)',
+            category: 'linguistic-risk',
+            categoryLabel: 'Linguistic Risk',
+            summary: 'How staging a celebrity’s fake death for awareness created massive trust deficits and business losses.',
+            readTime: '5 Min Read',
+            image: null,
+            url: 'blog/hauterfly-unethical-deception-2024.html',
+            featured: false
+          },
+          {
+            id: 16,
+            title: 'Case Study: Zomato Pure Veg Fleet & Sociological Segregation (2024)',
+            category: 'cultural-safety',
+            categoryLabel: 'Cultural Safety',
+            summary: 'Analyzing the physical and linguistic segregation controversy of Zomato’s "Pure Veg Fleet" launch.',
+            readTime: '5 Min Read',
+            image: null,
+            url: 'blog/zomato-pure-veg-fleet-2024.html',
+            featured: false
+          },
+          {
+            id: 17,
+            title: 'Case Study: Prada Kolhapuri Design Appropriation (2024)',
+            category: 'cultural-safety',
+            categoryLabel: 'Cultural Safety',
+            summary: 'Evaluating the digital PR backlash Prada faced for selling traditional Kolhapuri sandals with no cultural attribution.',
+            readTime: '4 Min Read',
+            image: null,
+            url: 'blog/prada-kolhapuri-appropriation-2024.html',
+            featured: false
+          },
+          {
+            id: 18,
+            title: 'Case Study: OYO God Placement & Spiritual Misappropriation (2025)',
+            category: 'cultural-safety',
+            categoryLabel: 'Cultural Safety',
+            summary: 'An analysis of OYO’s marketing campaign equating divine intervention with hotel bookings.',
+            readTime: '4 Min Read',
+            image: null,
+            url: 'blog/oyo-spiritual-misappropriation-2025.html',
+            featured: false
+          },
+          {
+            id: 19,
+            title: 'Case Study: Dabur Geopolitical Opportunism Marketing (2025)',
+            category: 'linguistic-risk',
+            categoryLabel: 'Linguistic Risk',
+            summary: 'Analyzing the professional polarization triggered by Dabur’s anti-US geopolitical messaging stunt.',
+            readTime: '4 Min Read',
+            image: null,
+            url: 'blog/dabur-geopolitical-opportunism-2025.html',
+            featured: false
+          },
+          {
+            id: 20,
+            title: 'Case Study: Fenty Beauty Indian Localization Mismatch (2025)',
+            category: 'cultural-safety',
+            categoryLabel: 'Cultural Safety',
+            summary: 'How a lack of local cultural grounding and context-aware marketing created criticism during Fenty Beauty’s India launch.',
+            readTime: '4 Min Read',
+            image: null,
+            url: 'blog/fenty-beauty-localization-failure-2025.html',
+            featured: false
+          },
+          {
+            id: 21,
+            title: 'Case Study: Patanjali Competitor Injunction Controversy (2025)',
+            category: 'linguistic-risk',
+            categoryLabel: 'Linguistic Risk',
+            summary: 'How labeling competitors as "dhoka" led to a Delhi High Court injunction and severe corporate legal damage.',
+            readTime: '5 Min Read',
+            image: null,
+            url: 'blog/patanjali-legal-denigration-2025.html',
+            featured: false
+          },
+          {
+            id: 22,
+            title: 'Case Study: Star Sports Rivalry Belittling Backlash (2026)',
+            category: 'cultural-safety',
+            categoryLabel: 'Cultural Safety',
+            summary: 'How belittling international sports rivals in promos turned an aggressive marketing angle into global humiliation.',
+            readTime: '4 Min Read',
+            image: null,
+            url: 'blog/star-sports-rivalry-mockery-2026.html',
+            featured: false
+          }
+        ],
+        filterArticles() {
+          this.isLoading = true;
+          setTimeout(() => { this.isLoading = false; }, 400);
+        },
+        get filteredList() {
+          return this.articles.filter(article => {
+            const matchesCategory = this.selectedCategory === 'all' || article.category === this.selectedCategory;
+            const matchesQuery = article.title.toLowerCase().includes(this.searchQuery.toLowerCase()) || 
+                                 article.summary.toLowerCase().includes(this.searchQuery.toLowerCase());
+            return matchesCategory && matchesQuery;
+          });
+        }
+      }));
+    });
+  </script>
 >
 
   <!-- Global Banner Notice -->
