@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -41,6 +41,12 @@
         { kw: 'lower caste', cat: 'Caste & Community Risk', reason: 'Direct caste-referencing in commercial messaging is legally sensitive under SC/ST Act provisions.', score: 50 },
         { kw: 'dalit', cat: 'Caste & Community Risk', reason: 'Using community identity terms commercially without authority or context is exploitative and legally risky.', score: 45 },
         { kw: 'brahmin', cat: 'Caste & Community Risk', reason: 'Caste identity references in brand messaging polarise audiences and attract regulatory attention.', score: 40 },
+        { kw: 'fuck', cat: 'Profanity & Offensive Language', reason: 'Explicit profanity is completely unacceptable in commercial copy and guarantees severe PR damage.', score: 80 },
+        { kw: 'shit', cat: 'Profanity & Offensive Language', reason: 'Profane language damages brand safety and violates advertising standards.', score: 50 },
+        { kw: 'bitch', cat: 'Profanity & Offensive Language', reason: 'Derogatory slurs violate social tone policies and brand safety guidelines.', score: 70 },
+        { kw: 'asshole', cat: 'Profanity & Offensive Language', reason: 'Offensive insults are strictly prohibited in public campaign copy.', score: 60 },
+        { kw: 'cunt', cat: 'Profanity & Offensive Language', reason: 'Extreme profanity will result in immediate platform bans and severe backlash.', score: 90 },
+        { kw: 'bastard', cat: 'Profanity & Offensive Language', reason: 'Offensive insults are strictly prohibited in public campaign copy.', score: 60 },
       ];
 
       for (const rule of rules) {
@@ -66,24 +72,86 @@
     }
 
     async function runAPIAnalysis(brandContext, demographics, campaignCopy, sensitivity, apiKey) {
-      const BACKEND_URL = 'http://127.0.0.1:8000';
       const combinedText = 'Brand Context: ' + brandContext + '\nTarget Market: ' + demographics + '\nCampaign Copy: ' + campaignCopy;
-      const marketCodeMap = { 'Whole India Market': 'IN-NAT', 'Tier 1 Market': 'IN-HN', 'Tier 2 Market': 'IN-SO', 'Tier 3 Market and Beyond': 'IN-NAT' };
-      const market = marketCodeMap[demographics] || 'IN-NAT';
-      const headers = { 'Content-Type': 'application/json' };
-      if (apiKey) headers['X-BrandCheck-Tier'] = 'EnterprisePaid';
+      const promptText = `You are BrandCheck Pro, analyzing marketing copy for cultural/social risk in India.
+${combinedText}
+
+EVALUATION PARAMETERS:
+1. Religious Sensitivity
+2. Political Neutrality
+3. Gender & Social Tone
+4. Sarcasm & Double Meaning
+5. Profanity & Offensive Language (Flag swear words, slurs, or toxic language immediately with high severity).
+
+OUTPUT FORMAT:
+Return ONLY a valid JSON object matching this schema. No markdown formatting blocks like \`\`\`json, no extra text.
+{
+  "overall_score": 85,
+  "risk_level": "Safe|Caution|High Risk|Critical",
+  "summary": "Detailed summary...",
+  "flagged_issues": [
+    {
+      "phrase": "the exact word",
+      "category": "Category Name",
+      "rationale": "Why it is flagged"
+    }
+  ]
+}`;
+
       try {
-        const res = await fetch(BACKEND_URL + '/v1/analyze', {
-          method: 'POST', headers,
-          body: JSON.stringify({ text: combinedText, market }),
-          signal: AbortSignal.timeout(8000)
-        });
-        if (!res.ok) throw new Error('API returned ' + res.status);
-        const data = await res.json();
-        data.engine = 'api';
-        return data;
+        if (apiKey && apiKey.startsWith('sk-or-')) {
+          const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'google/gemini-flash-1.5',
+              messages: [{ role: 'user', content: promptText }],
+              response_format: { type: 'json_object' }
+            }),
+            signal: AbortSignal.timeout(15000)
+          });
+          if (!res.ok) throw new Error('OpenRouter API returned ' + res.status);
+          const data = await res.json();
+          let text = data.choices[0].message.content;
+          text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+          let parsed = JSON.parse(text);
+          parsed.engine = 'api';
+          return parsed;
+        } else if (apiKey) {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: promptText }] }],
+              generationConfig: { responseMimeType: "application/json" }
+            }),
+            signal: AbortSignal.timeout(15000)
+          });
+          if (!res.ok) throw new Error('Gemini API returned ' + res.status);
+          const data = await res.json();
+          let text = data.candidates[0].content.parts[0].text;
+          text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+          let parsed = JSON.parse(text);
+          parsed.engine = 'api';
+          return parsed;
+        } else {
+          const BACKEND_URL = 'http://127.0.0.1:8000';
+          const marketCodeMap = { 'Whole India Market': 'IN-NAT', 'Tier 1 Market': 'IN-HN', 'Tier 2 Market': 'IN-SO', 'Tier 3 Market and Beyond': 'IN-NAT' };
+          const market = marketCodeMap[demographics] || 'IN-NAT';
+          const res = await fetch(BACKEND_URL + '/v1/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: combinedText, market }),
+            signal: AbortSignal.timeout(8000)
+          });
+          if (!res.ok) throw new Error('Local Backend returned ' + res.status);
+          const data = await res.json();
+          data.engine = 'api';
+          return data;
+        }
       } catch (err) {
-        console.warn('Backend unavailable, switching to local engine:', err.message);
+        console.warn('API unavailable or failed, switching to local engine:', err.message);
         return null;
       }
     }
