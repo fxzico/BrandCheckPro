@@ -178,8 +178,8 @@
               x-model="brandContext"
               @input="brandContextWarning = false"
               placeholder="e.g., A premium consumer beverage campaign promoting a summer festive discount for urban families..." 
-              class="w-full h-32 p-3 text-xs bg-slate-950/50 border rounded-lg focus:outline-none focus:border-brandNeon/50 transition font-sans placeholder-slate-600"
-              :class="darkMode ? 'border-slate-800 text-white' : 'border-slate-300 text-slate-900'"
+              class="w-full h-32 p-3 text-xs border rounded-lg focus:outline-none focus:border-brandNeon/50 transition font-sans"
+              :class="darkMode ? 'bg-slate-900 border-slate-800 text-white placeholder-slate-500' : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400'"
             ></textarea>
             <div x-show="brandContextWarning" x-transition class="text-xs text-rose-500 font-semibold bg-rose-500/10 border border-rose-500/20 rounded p-2.5 mt-2">
               Please provide a brand name, website URL, or product category context to help the engine accurately calibrate safety thresholds.
@@ -212,8 +212,8 @@
               <textarea 
                 x-model="campaignCopy"
                 placeholder="Type or paste copy slogan text here to evaluate..." 
-                class="w-full h-24 p-3 text-xs bg-slate-950/50 border rounded-lg focus:outline-none focus:border-brandNeon/50 transition font-sans placeholder-slate-600"
-                :class="darkMode ? 'border-slate-800 text-white' : 'border-slate-300 text-slate-900'"
+                class="w-full h-24 p-3 text-xs border rounded-lg focus:outline-none focus:border-brandNeon/50 transition font-sans"
+                :class="darkMode ? 'bg-slate-900 border-slate-800 text-white placeholder-slate-500' : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400'"
               ></textarea>
             </div>
             
