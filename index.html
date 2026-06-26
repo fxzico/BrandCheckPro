@@ -61,16 +61,17 @@
         }
       }
     }
-  </script>
+  <style>[x-cloak] { display: none !important; }</style>
 </head>
 <body 
   class="transition-colors duration-200 font-sans antialiased" 
   :class="darkMode ? 'dark bg-brandBgDark text-slate-100' : 'bg-brandBgLight text-slate-800'"
   x-data="brandCheckApp()"
+  x-cloak
 >
 
   <!-- Global Banner Notice -->
-  <div class="bg-brandBlue text-white text-center py-2.5 px-4 text-xs font-semibold tracking-wide border-b border-blue-700/50">
+  <div class="bg-brandBlue text-white text-center py-2.5 px-4 text-xs font-semibold tracking-wide border-b border-blue-700/50 h-10 block">
     🔒 AGENCY SECURITY ACTIVE: Zero-Data Retention Pipeline enabled. Input payloads are processed entirely in volatile RAM and deleted immediately post-analysis. No data footprints are generated or stored.
   </div>
 
@@ -160,7 +161,7 @@
     </div>
 
     <!-- Live Workspace Split Pane -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-20">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-20 min-h-[700px] content-start">
       
       <!-- LEFT PANEL: 3-Step Conversational Input Wizard -->
       <section class="lg:col-span-5 glass-card rounded-xl p-6 flex flex-col justify-between min-h-[500px]" :class="darkMode ? 'bg-brandSurfaceDark/40' : 'bg-brandSurfaceLight shadow-sm'">
