@@ -39,41 +39,39 @@
 
   <nav class="border-b px-6 py-4 border-slate-800 bg-[#0B0F19]/85 backdrop-blur-md sticky top-0 z-40">
     <div class="max-w-6xl mx-auto flex justify-between items-center">
+      <!-- Logo Identity -->
       <div class="flex items-center gap-3 cursor-pointer" onclick="window.location.reload()">
         <div class="w-3 h-3 bg-[#38BDF8] rounded-full shadow-[0_0_10px_#38BDF8]"></div>
         <span class="text-xl font-bold tracking-tight">BrandCheck <span class="text-[#38BDF8]">Pro</span></span>
       </div>
       
+      <!-- Core App Page Routing Links -->
+      <div class="hidden md:flex items-center gap-8 text-sm font-medium">
+        <a href="index.html" class="text-[#38BDF8] font-semibold transition">Dashboard</a>
+        <a href="blog.html" class="transition text-slate-400 hover:text-[#38BDF8]">Brand Stories</a>
+        <a href="origin.html" class="transition text-slate-400 hover:text-[#38BDF8]">Origin</a>
+        <a href="pricing.html" class="transition text-slate-400 hover:text-[#38BDF8]">Pricing</a>
+        <a href="api-connector.html" class="transition text-slate-400 hover:text-[#38BDF8]">Developer Portal</a>
+      </div>
+
+      <!-- Control Toggles Group Row -->
       <div class="flex items-center gap-4">
-        <span x-show="cloudEngineKey" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" style="display: none;">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-          LIVE AI PIPELINE
-        </span>
-
-        <button @click="connectionModal = true" class="p-2 rounded-full hover:bg-slate-800 border border-transparent hover:border-slate-700 transition relative group" aria-label="Connect Cloud Engine" title="Connect Cloud Engine">
-          <span class="text-slate-400 hover:text-[#38BDF8] transition text-sm">⚙️</span>
-          <span class="absolute top-10 right-0 scale-0 group-hover:scale-100 transition-all duration-100 bg-slate-800 text-[10px] text-white px-2 py-1 rounded font-mono whitespace-nowrap z-50">Cloud Config</span>
+        <button @click="connectionModal = true" class="p-2 rounded-lg border border-slate-800 bg-slate-900/50 hover:bg-slate-800 text-slate-400 hover:text-[#38BDF8] transition duration-150" aria-label="Cloud Configuration">
+          ⚙️
         </button>
 
-        <button @click="darkMode = !darkMode; if (darkMode) { document.documentElement.classList.add('dark'); } else { document.documentElement.classList.remove('dark'); }" class="p-2 rounded-full hover:bg-slate-800 border border-transparent hover:border-slate-700 transition relative group" aria-label="Toggle Theme" title="Toggle Theme">
+        <button @click="darkMode = !darkMode" class="p-2 rounded-lg border border-slate-800 bg-slate-900/50 hover:bg-slate-800 transition duration-150" aria-label="Toggle Theme">
           <span x-show="darkMode" class="text-amber-400">☀️</span>
-          <span x-show="!darkMode" class="text-slate-400 hover:text-slate-200" style="display: none;">🌙</span>
+          <span x-show="!darkMode" class="text-slate-400" style="display: none;">🌙</span>
         </button>
 
-        <div x-show="!user">
-          <button @click="authModal = true" class="border border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white font-semibold px-4 py-2 rounded-md text-xs transition">
+        <div>
+          <button @click="authModal = true" class="border border-slate-700 bg-slate-900/40 text-slate-200 hover:bg-slate-800 hover:text-white font-semibold px-4 py-2 rounded-md text-xs transition duration-150">
             Sign In
           </button>
         </div>
 
-        <div x-show="user" class="relative" style="display: none;">
-          <button class="flex items-center gap-2 px-2.5 py-1 rounded-full border border-slate-800 bg-slate-900 transition">
-            <div class="w-5 h-5 rounded-full border border-[#38BDF8] bg-slate-700 flex items-center justify-center text-[10px] text-white">U</div>
-            <span class="text-xs font-semibold text-slate-200">Account</span>
-          </button>
-        </div>
-
-        <a href="pricing.html" class="bg-[#2563EB] hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-md text-xs transition shadow-lg shadow-blue-600/20">
+        <a href="pricing.html" class="bg-[#2563EB] hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-md text-xs transition duration-150 shadow-md">
           Enterprise Access
         </a>
       </div>
@@ -158,6 +156,38 @@
       <h3 class="text-lg font-bold text-white mb-2">Sign In</h3>
       <p class="text-xs text-slate-400 mb-4">Session validation required.</p>
       <button @click="authModal = false" class="w-full mt-4 bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded text-xs tracking-wide transition duration-150">Close Window</button>
+    </div>
+  </div>
+
+  <!-- Live Infrastructure Pipeline Connection Modal -->
+  <div x-show="connectionModal" class="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4" style="display: none;" @click.away="connectionModal = false">
+    <div class="border max-w-md w-full p-6 rounded-xl bg-[#1E293B] border-slate-700 shadow-2xl relative text-left">
+      <div class="flex justify-between items-center mb-4 border-b pb-3 border-slate-800">
+        <h3 class="text-sm font-bold text-white uppercase tracking-wider">Cloud Engine Configuration</h3>
+        <button @click="connectionModal = false" class="text-slate-400 hover:text-white text-xl leading-none">&times;</button>
+      </div>
+      <p class="text-xs text-slate-400 mb-4 leading-relaxed">
+        Configure your private Google AI Studio or OpenRouter API keys to route analysis requests through your own cloud environment.
+      </p>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1.5">API Key</label>
+          <input 
+            type="password" 
+            x-model="cloudEngineKey" 
+            placeholder="Paste your secret api key here..." 
+            class="w-full p-3 text-xs border rounded-lg bg-slate-900 border-slate-800 text-white placeholder-slate-700 focus:outline-none focus:border-[#38BDF8]"
+          />
+        </div>
+        <div class="flex gap-2">
+          <button @click="connectionModal = false; alert('API Key Configured!')" class="flex-1 bg-[#38BDF8] text-slate-950 hover:bg-[#7dd3fc] font-bold py-2 px-4 rounded text-xs transition duration-150 text-center shadow-md">
+            Save Key
+          </button>
+          <button @click="cloudEngineKey = ''; connectionModal = false; alert('API Key Cleared.')" class="px-4 py-2 rounded text-xs font-semibold border border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800 transition duration-150">
+            Clear Key
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </body>
