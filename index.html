@@ -9,6 +9,7 @@
 </head>
 <body class="bg-[#0B0F19] text-slate-100 min-h-screen font-sans antialiased" 
       x-data="{ 
+        darkMode: true, 
         privacyModal: false, 
         connectionModal: false, 
         authModal: false, 
@@ -116,8 +117,8 @@
 
         <div class="flex items-center gap-3 mt-8 pt-4 border-t border-slate-800">
           <button x-show="wizardStep > 1" @click="wizardStep--" type="button" class="px-4 py-2 rounded text-xs font-semibold border border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800 transition duration-150" style="display: none;">← Back</button>
-          <button x-show="wizardStep < 3" @click="nextStep()" type="button" class="flex-1 bg-[#2563EB] text-white hover:bg-blue-700 font-bold py-2 px-4 rounded text-xs transition duration-150 text-center shadow-lg">Next Step →</button>
-          <button x-show="wizardStep === 3" @click="runComplianceCheck()" type="button" class="flex-1 bg-[#38BDF8] text-slate-950 hover:bg-[#7dd3fc] font-extrabold py-2 px-4 rounded text-xs transition duration-150 text-center shadow-md" style="display: none;">RUN COMPLIANCE CHECK</button>
+          <button x-show="wizardStep < 3" @click="nextStep()" type="button" class="flex-1 bg-[#2563EB] text-white py-2 rounded text-xs font-bold hover:opacity-95 transition text-center shadow-lg">Next Step →</button>
+          <button x-show="wizardStep === 3" @click="runComplianceCheck()" type="button" class="flex-1 bg-[#38BDF8] text-slate-950 py-2 rounded text-xs font-extrabold hover:opacity-95 transition text-center shadow-lg" style="display: none;">RUN COMPLIANCE CHECK</button>
         </div>
       </section>
 
