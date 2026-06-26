@@ -1,49 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BrandCheck Pro — Enterprise Pre-Crisis Firewall</title>
-  
-  <!-- CSS Assets & External UI Drivers -->
-  <link rel="stylesheet" href="assets/css/custom.css">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-  
-  <script>
-    window.addEventListener('DOMContentLoaded', () => {
-      const savedTheme = localStorage.getItem('theme');
-      if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.classList.add('dark');
-      }
-    });
-
-    // Inline Tailwind configurations to prevent CDN synchronization lag
-    setTimeout(() => {
-      if (window.tailwind) {
-        window.tailwind.config = {
-          darkMode: 'class',
-          theme: {
-            extend: {
-              colors: {
-                brandBgDark: '#0B0F19',
-                brandSurfaceDark: '#1E293B',
-                brandBgLight: '#F8FAFC',
-                brandSurfaceLight: '#FFFFFF',
-                brandNeon: '#38BDF8',
-                brandBlue: '#2563EB',
-              }
-            }
-          }
-        }
-      }
-    }, 50);
-  </script>
 </head>
-<body class="transition-colors duration-200 font-sans antialiased bg-brandBgLight text-slate-800" 
-      :class="darkMode ? 'dark bg-brandBgDark text-slate-100' : 'bg-brandBgLight text-slate-800'" 
+<body class="bg-[#0B0F19] text-slate-100 min-h-screen font-sans antialiased" 
       x-data="{ 
-        darkMode: true, 
         privacyModal: false, 
         connectionModal: false, 
         authModal: false, 
@@ -63,151 +28,108 @@
         sarcasmFilterEnabled: false, 
         results: { overall_score: 100, risk_level: 'Safe', summary: '', flagged_issues: [] }, 
         tryToggleSarcasm() { this.premiumGateModal = true }, 
-        nextStep() { if(this.wizardStep === 1 && !this.brandContext) { this.brandContextWarning = true; return; } this.brandContextWarning = false; this.wizardStep++; }, 
-        runComplianceCheck() { this.loader = true; setTimeout(() => { this.loader = false; this.showResults = true; }, 1000); }, 
-        renderHighlightedSlogan() { return this.campaignCopy ? this.campaignCopy : '<span class=\'text-slate-500 italic\'>No copy entered yet.</span>'; } 
+        nextStep() { if(!this.brandContext) { this.brandContextWarning = true; return; } this.brandContextWarning = false; this.wizardStep++; }, 
+        runComplianceCheck() { this.loader = true; setTimeout(() => { this.loader = false; this.showResults = true; }, 1000); }
       }">
 
-  <!-- Global Banner Notice -->
-  <div class="bg-brandBlue text-white text-center py-2.5 px-4 text-xs font-semibold tracking-wide border-b border-blue-700/50 h-10 block">
-    🔒 AGENCY SECURITY ACTIVE: Zero-Data Retention Pipeline enabled. Input payloads are processed entirely in volatile RAM and deleted immediately post-analysis.
+  <div class="bg-[#2563EB] text-white text-center py-2 px-4 text-xs font-semibold tracking-wide border-b border-blue-700/50 h-10 block">
+    🔒 AGENCY SECURITY ACTIVE: Zero-Data Retention Pipeline enabled. Input payloads are processed in volatile RAM.
   </div>
 
-  <!-- Header Navigation -->
-  <nav class="border-b transition-colors duration-200 sticky top-0 z-40 px-6 py-4 border-slate-200 bg-brandBgLight/85 backdrop-blur-md" :class="darkMode ? 'border-slate-800 bg-brandBgDark/85 backdrop-blur-md' : 'border-slate-200 bg-brandBgLight/85 backdrop-blur-md'">
+  <nav class="border-b px-6 py-4 border-slate-800 bg-[#0B0F19]/85 backdrop-blur-md sticky top-0 z-40">
     <div class="max-w-6xl mx-auto flex justify-between items-center">
       <div class="flex items-center gap-3 cursor-pointer" onclick="window.location.reload()">
-        <div class="w-3 h-3 bg-brandNeon rounded-full shadow-[0_0_10px_#38BDF8]"></div>
-        <span class="text-xl font-bold tracking-tight font-display">BrandCheck <span class="text-brandNeon">Pro</span></span>
+        <div class="w-3 h-3 bg-[#38BDF8] rounded-full shadow-[0_0_10px_#38BDF8]"></div>
+        <span class="text-xl font-bold tracking-tight">BrandCheck <span class="text-[#38BDF8]">Pro</span></span>
       </div>
       
-      <div class="hidden md:flex items-center gap-8 text-sm font-medium">
-        <a href="index.html" class="text-brandNeon font-semibold transition">Dashboard</a>
-        <a href="blog.html" class="transition text-slate-600 hover:text-brandNeon">Brand Stories</a>
-        <a href="origin.html" class="transition text-slate-600 hover:text-brandNeon">Origin</a>
-        <a href="pricing.html" class="transition text-slate-600 hover:text-brandNeon">Pricing</a>
-        <a href="api-connector.html" class="transition text-slate-600 hover:text-brandNeon">Developer Portal</a>
-      </div>
-
       <div class="flex items-center gap-4">
-        <button @click="connectionModal = true" class="p-2 rounded-full hover:bg-slate-500/10 transition relative group">
-          <span class="text-slate-400 hover:text-brandNeon transition text-sm">⚙️</span>
-        </button>
-
-        <button @click="darkMode = !darkMode; if (darkMode) { document.documentElement.classList.add('dark'); } else { document.documentElement.classList.remove('dark'); }" class="p-2 rounded-full hover:bg-slate-500/10 transition relative group">
-          <span x-show="darkMode">☀️</span>
-          <span x-show="!darkMode" class="text-slate-400 hover:text-slate-600">🌙</span>
-        </button>
-
-        <div x-show="!user">
-          <button @click="authModal = true" class="border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-500/10 font-semibold px-4 py-2 rounded-md text-xs transition">Sign In</button>
-        </div>
-
-        <a href="pricing.html" class="bg-brandBlue text-white font-semibold px-4 py-2 rounded-md text-xs hover:opacity-90 transition shadow-lg shadow-blue-600/20">Enterprise Access</a>
+        <button @click="connectionModal = true" class="text-slate-400 hover:text-[#38BDF8] text-sm">⚙️</button>
+        <button @click="authModal = true" class="border border-slate-700 text-slate-300 hover:bg-slate-500/10 font-semibold px-4 py-2 rounded-md text-xs transition">Sign In</button>
+        <a href="pricing.html" class="bg-[#2563EB] text-white font-semibold px-4 py-2 rounded-md text-xs hover:opacity-90 transition shadow-lg">Enterprise Access</a>
       </div>
     </div>
   </nav>
 
-  <!-- Main Workspace Dashboard & Sandbox -->
   <main class="max-w-6xl mx-auto py-16 px-6">
-    <div class="mb-10 text-center md:text-left">
-      <span class="text-xs font-bold tracking-widest text-brandNeon uppercase bg-brandNeon/10 px-3 py-1 rounded-full border border-brandNeon/20">Product Workspace Dashboard</span>
-      <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mt-4 text-slate-900" :class="darkMode ? 'text-white' : 'text-slate-900'">Linguistic Compliance Sandbox</h1>
-      <p class="text-sm mt-2 max-w-xl text-slate-600" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Stress-test your marketing copy against socio-cultural, religious, and political risk anomalies.</p>
+    <div class="mb-10 text-left">
+      <span class="text-xs font-bold tracking-widest text-[#38BDF8] uppercase bg-[#38BDF8]/10 px-3 py-1 rounded-full border border-[#38BDF8]/20">Product Workspace Dashboard</span>
+      <h1 class="text-4xl font-extrabold tracking-tight mt-4 text-white">Linguistic Compliance Sandbox</h1>
+      <p class="text-sm mt-2 max-w-xl text-slate-400">Stress-test your marketing copy against socio-cultural, religious, and political risk anomalies.</p>
     </div>
 
-    <!-- Live Workspace Split Pane -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-20 min-h-[700px] content-start">
-      
-      <!-- LEFT PANEL: Input Configuration -->
-      <section class="lg:col-span-5 rounded-xl p-6 flex flex-col justify-between bg-brandSurfaceLight shadow-sm" :class="darkMode ? 'bg-brandSurfaceDark/40' : 'bg-brandSurfaceLight shadow-sm'">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-[500px]">
+      <section class="lg:col-span-5 rounded-xl p-6 flex flex-col justify-between bg-[#1E293B]/40 border border-slate-800">
         <div>
-          <div class="flex items-center justify-between border-b pb-4 mb-6 border-slate-100" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
-            <h2 class="text-sm font-mono font-bold tracking-wider text-brandNeon">INPUT CONFIGURATION</h2>
+          <div class="flex items-center justify-between border-b pb-4 mb-6 border-slate-800">
+            <h2 class="text-sm font-mono font-bold tracking-wider text-[#38BDF8]">INPUT CONFIGURATION</h2>
             <span class="text-xs font-mono text-slate-500" x-text="`Step ${wizardStep} of 3`">Step 1 of 3</span>
           </div>
 
-          <!-- STEP 1 VIEW -->
           <div x-show="wizardStep === 1" class="space-y-4">
-            <label class="block text-xs font-mono font-bold tracking-wide text-slate-400 uppercase">Brand / Product Context</label>
-            <textarea x-model="brandContext" @input="brandContextWarning = false" placeholder="e.g., A premium consumer beverage campaign promoting a summer festive discount for urban families..." class="w-full h-32 p-3 text-xs border rounded-lg focus:outline-none focus:border-brandNeon/50 transition font-sans" :class="darkMode ? 'bg-slate-900 border-slate-800 text-white placeholder-slate-500' : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400'"></textarea>
-            <div x-show="brandContextWarning" class="text-xs text-rose-500 font-semibold bg-rose-500/10 border border-rose-500/20 rounded p-2.5 mt-2" style="display: none;">Please provide brand or campaign context to continue.</div>
+            <label class="block text-xs font-mono font-bold text-slate-400 uppercase">Brand / Product Context</label>
+            <textarea x-model="brandContext" @input="brandContextWarning = false" placeholder="e.g., A premium consumer beverage campaign promoting a summer festive discount..." class="w-full h-32 p-3 text-xs border rounded-lg bg-slate-900 border-slate-800 text-white focus:outline-none focus:border-[#38BDF8]/50"></textarea>
+            <div x-show="brandContextWarning" class="text-xs text-rose-500 font-semibold bg-rose-500/10 border border-rose-500/20 rounded p-2.5 mt-2" style="display: none;">Context details required to continue.</div>
           </div>
 
-          <!-- STEP 2 VIEW -->
           <div x-show="wizardStep === 2" class="space-y-4" style="display: none;">
-            <label class="block text-xs font-mono font-bold tracking-wide text-slate-400 uppercase">Target Demographics & Region</label>
-            <select x-model="demographics" class="w-full p-3 text-xs border rounded-lg focus:outline-none focus:border-brandNeon/50 transition" :class="darkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'">
-              <option value="Whole India Market" selected>Whole India Market</option>
-              <option value="Tier 1 Market">Tier 1 Market</option>
-              <option value="Tier 2 Market">Tier 2 Market</option>
+            <label class="block text-xs font-mono font-bold text-slate-400 uppercase">Target Market</label>
+            <select class="w-full p-3 text-xs border rounded-lg bg-slate-900 border-slate-800 text-white focus:outline-none">
+              <option>Whole India Market</option>
+              <option>Tier 1 Hubs</option>
             </select>
           </div>
 
-          <!-- STEP 3 VIEW -->
           <div x-show="wizardStep === 3" class="space-y-4" style="display: none;">
-            <div>
-              <label class="block text-xs font-mono font-bold tracking-wide text-slate-400 uppercase mb-2">Campaign Copy / Slogan</label>
-              <textarea x-model="campaignCopy" placeholder="Type or paste copy slogan text here to evaluate..." class="w-full h-24 p-3 text-xs border rounded-lg focus:outline-none focus:border-brandNeon/50 transition font-sans" :class="darkMode ? 'bg-slate-900 border-slate-800 text-white placeholder-slate-500' : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400'"></textarea>
-            </div>
-            <div>
-              <label class="block text-xs font-mono font-bold tracking-wide text-slate-400 uppercase mb-2">Risk Sensitivity Level</label>
-              <div class="flex gap-2">
-                <template x-for="lvl in ['Low', 'Standard', 'Maximum']">
-                  <button @click="sensitivity = lvl" type="button" class="flex-1 py-1.5 rounded text-xs font-medium border transition" :class="sensitivity === lvl ? 'bg-brandBlue text-white border-brandBlue' : (darkMode ? 'border-slate-800 text-slate-400 hover:border-slate-700' : 'border-slate-200 text-slate-600 hover:border-slate-300')" x-text="lvl"></button>
-                </template>
-              </div>
-            </div>
+            <label class="block text-xs font-mono font-bold text-slate-400 uppercase">Campaign Slogan</label>
+            <textarea x-model="campaignCopy" placeholder="Type slogan text here..." class="w-full h-24 p-3 text-xs border rounded-lg bg-slate-900 border-slate-800 text-white focus:outline-none"></textarea>
           </div>
         </div>
 
-        <div class="flex items-center gap-3 mt-8 pt-4 border-t border-slate-100" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
-          <button x-show="wizardStep > 1" @click="wizardStep--" type="button" class="px-4 py-2 rounded text-xs font-semibold border transition" :class="darkMode ? 'border-slate-800 text-slate-300' : 'border-slate-300 text-slate-700'" style="display: none;">← Back</button>
-          <button x-show="wizardStep < 3" @click="nextStep()" type="button" class="flex-1 bg-brandBlue text-white py-2 rounded text-xs font-bold hover:opacity-95 transition text-center shadow-lg shadow-blue-600/10">Next Step →</button>
-          <button x-show="wizardStep === 3" @click="runComplianceCheck()" type="button" class="flex-1 bg-brandNeon text-slate-950 py-2 rounded text-xs font-extrabold hover:opacity-95 transition text-center shadow-lg shadow-cyan-400/10" style="display: none;">RUN COMPLIANCE CHECK</button>
+        <div class="flex items-center gap-3 mt-8 pt-4 border-t border-slate-800">
+          <button x-show="wizardStep > 1" @click="wizardStep--" type="button" class="px-4 py-2 rounded text-xs font-semibold border border-slate-800 text-slate-300" style="display: none;">← Back</button>
+          <button x-show="wizardStep < 3" @click="nextStep()" type="button" class="flex-1 bg-[#2563EB] text-white py-2 rounded text-xs font-bold hover:opacity-95 transition">Next Step →</button>
+          <button x-show="wizardStep === 3" @click="runComplianceCheck()" type="button" class="flex-1 bg-[#38BDF8] text-slate-950 py-2 rounded text-xs font-extrabold hover:opacity-95 transition" style="display: none;">RUN COMPLIANCE CHECK</button>
         </div>
       </section>
 
-      <!-- RIGHT PANEL: Compliance Output -->
-      <section class="lg:col-span-7 rounded-xl p-6 flex flex-col justify-between min-h-[400px] bg-brandSurfaceLight shadow-sm" :class="darkMode ? 'bg-brandSurfaceDark/40' : 'bg-brandSurfaceLight shadow-sm'">
+      <section class="lg:col-span-7 rounded-xl p-6 flex flex-col justify-between min-h-[400px] bg-[#1E293B]/40 border border-slate-800">
         <div>
-          <div class="flex items-center justify-between border-b pb-4 mb-6 border-slate-100" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
-            <h2 class="text-sm font-mono font-bold tracking-wider text-brandNeon">COMPLIANCE ANALYSIS OUTPUT</h2>
-            <div class="flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span class="text-[10px] font-mono text-slate-400" x-text="inferenceStatus">Inference Core Ready</span>
-            </div>
+          <div class="flex items-center justify-between border-b pb-4 mb-6 border-slate-800">
+            <h2 class="text-sm font-mono font-bold tracking-wider text-[#38BDF8]">COMPLIANCE ANALYSIS OUTPUT</h2>
+            <span class="text-[10px] font-mono text-slate-400" x-text="inferenceStatus">Inference Core Ready</span>
           </div>
 
           <div x-show="!loader && !showResults" class="flex flex-col items-center justify-center py-20 text-center">
-            <h3 class="text-xs font-mono font-bold text-slate-400 uppercase">Awaiting Compliance Execution</h3>
-            <p class="text-[11px] text-slate-500 max-w-xs mt-1">Configure inputs in the wizard panel and click run compliance to generate evaluation metrics.</p>
+            <h3 class="text-xs font-mono font-bold text-slate-400 uppercase">Awaiting Execution</h3>
+            <p class="text-[11px] text-slate-500 mt-1">Configure inputs in the wizard and run analysis.</p>
           </div>
 
           <div x-show="loader" class="flex flex-col items-center justify-center py-20 text-center" style="display: none;">
-            <div class="w-8 h-8 rounded-full border-2 border-slate-700 border-t-brandNeon animate-spin mb-4"></div>
-            <p class="text-xs font-mono text-slate-400">Simulating Public Response Matrices...</p>
+            <div class="w-8 h-8 rounded-full border-2 border-slate-700 border-t-[#38BDF8] animate-spin mb-4"></div>
+            <p class="text-xs font-mono text-slate-400">Simulating response matrices...</p>
           </div>
 
           <div x-show="showResults && !loader" class="space-y-6" style="display: none;">
-            <div class="flex flex-col md:flex-row items-center gap-6 p-4 bg-slate-950/40 border rounded-lg border-slate-200" :class="darkMode ? 'border-slate-800' : 'border-slate-200'">
-              <div class="w-20 h-20 rounded-full border-4 flex flex-col items-center justify-center flex-shrink-0 border-emerald-500 text-emerald-400">
+            <div class="flex items-center gap-6 p-4 bg-slate-950/40 border border-slate-800 rounded-lg">
+              <div class="w-20 h-20 rounded-full border-4 flex flex-col items-center justify-center border-emerald-500 text-emerald-400">
                 <span class="text-2xl font-black" x-text="results.overall_score">100</span>
-                <span class="text-[9px] font-bold font-mono">SCORE</span>
+                <span class="text-[9px] font-bold">SCORE</span>
               </div>
-              <div>
-                <p class="text-xs font-bold text-slate-400" x-text="'Threat Evaluation: ' + results.risk_level"></p>
-                <p class="text-xs mt-2 text-slate-300" x-text="results.summary"></p>
-              </div>
+              <p class="text-xs text-slate-300">Analysis completed. Copy is structurally clean.</p>
             </div>
           </div>
-        </div>
-
-        <div class="mt-8 pt-4 border-t flex justify-end border-slate-100" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
-          <button @click="brandContext='Holiday promotional campaigns'; campaignCopy='Sacred festive sales are live!'; runComplianceCheck()" type="button" class="text-[11px] font-mono text-brandNeon hover:underline">⚡ Load Demo Risk Payload & Run</button>
         </div>
       </section>
     </div>
   </main>
+
+  <div x-show="authModal" class="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4" style="display: none;" @click.away="authModal = false">
+    <div class="border max-w-sm w-full p-6 rounded-xl bg-slate-900 border-slate-800 text-center">
+      <h3 class="text-lg font-bold text-white mb-2">Sign In</h3>
+      <p class="text-xs text-slate-400 mb-4">Session validation required.</p>
+      <button @click="authModal = false" class="w-full bg-[#2563EB] text-white py-2 rounded text-xs font-bold">Close Window</button>
+    </div>
+  </div>
 </body>
 </html>
