@@ -151,7 +151,10 @@ Return ONLY a valid JSON object matching this schema. No markdown formatting blo
           return data;
         }
       } catch (err) {
-        console.warn('API unavailable or failed, switching to local engine:', err.message);
+        console.warn('API unavailable or failed:', err.message);
+        if (apiKey) {
+          throw err;
+        }
         return null;
       }
     }
@@ -172,7 +175,7 @@ Return ONLY a valid JSON object matching this schema. No markdown formatting blo
         sensitivity: 'Standard',
         brandContextWarning: false,
         user: null,
-        cloudEngineKey: '',
+        cloudEngineKey: localStorage.getItem('BC_LIVE_CORE_KEY') || '',
         showResults: false,
         loader: false,
         faqOpen: null,
@@ -190,18 +193,28 @@ Return ONLY a valid JSON object matching this schema. No markdown formatting blo
           this.loader = true;
           this.showResults = false;
           this.inferenceStatus = 'Scanning socio-cultural risk matrices...';
-          const apiKey = this.cloudEngineKey || localStorage.getItem('BC_LIVE_CORE_KEY') || '';
+          const apiKey = this.cloudEngineKey || '';
           let result = null;
           if (apiKey) {
-            result = await runAPIAnalysis(this.brandContext, this.demographics, this.campaignCopy, this.sensitivity, apiKey);
+            try {
+              result = await runAPIAnalysis(this.brandContext, this.demographics, this.campaignCopy, this.sensitivity, apiKey);
+            } catch (err) {
+              result = {
+                overall_score: 0,
+                risk_level: 'Critical',
+                summary: 'Live AI Connection Failed: ' + err.message + '. Please verify your API Key and internet access.',
+                flagged_issues: [],
+                engine: 'API Connection Error'
+              };
+            }
           }
           if (!result) {
             await new Promise(r => setTimeout(r, 900));
             result = localHeuristicEngine(this.brandContext, this.demographics, this.campaignCopy, this.sensitivity);
           }
           this.results = result;
-          this.engineUsed = result.engine === 'api' ? 'Live API Engine' : 'Local Heuristic Engine';
-          this.inferenceStatus = result.engine === 'api' ? 'Live AI Analysis Complete' : 'Local Analysis Complete';
+          this.engineUsed = result.engine === 'api' ? 'Live API Engine' : (result.engine === 'API Connection Error' ? 'Connection Error' : 'Local Heuristic Engine');
+          this.inferenceStatus = result.engine === 'api' ? 'Live AI Analysis Complete' : (result.engine === 'API Connection Error' ? 'Live AI Failed' : 'Local Analysis Complete');
           this.loader = false;
           this.showResults = true;
         },
