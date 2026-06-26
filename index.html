@@ -62,7 +62,7 @@
       }
     }
 </head>
-<body class="transition-colors duration-200 font-sans antialiased bg-brandBgLight text-slate-800" :class="darkMode ? 'dark bg-brandBgDark text-slate-100' : 'bg-brandBgLight text-slate-800'" x-data="{ darkMode: true, privacyModal: false, connectionModal: false, authModal: false, premiumGateModal: false, wizardStep: 1, brandContext: '', campaignCopy: '', selectedEngine: 'tier1', sensitivity: 'Standard', brandContextWarning: false, user: null, cloudEngineKey: '', showResults: false, loader: false, faqOpen: null }">
+<body class="transition-colors duration-200 font-sans antialiased bg-brandBgLight text-slate-800" :class="darkMode ? 'dark bg-brandBgDark text-slate-100' : 'bg-brandBgLight text-slate-800'" x-data="{ darkMode: true, privacyModal: false, connectionModal: false, authModal: false, premiumGateModal: false, wizardStep: 1, brandContext: '', campaignCopy: '', selectedEngine: 'tier1', sensitivity: 'Standard', brandContextWarning: false, user: null, cloudEngineKey: '', showResults: false, loader: false, faqOpen: null, inferenceStatus: 'Inference Core Ready', sarcasmFilterEnabled: false, results: { overall_score: 100, risk_level: 'Safe', summary: '', flagged_issues: [] }, tryToggleSarcasm() { this.premiumGateModal = true }, nextStep() { if(this.wizardStep === 1 && !this.brandContext) { this.brandContextWarning = true; return; } this.brandContextWarning = false; this.wizardStep++; }, runComplianceCheck() { this.loader = true; setTimeout(() => { this.loader = false; this.showResults = true; }, 1000); }, renderHighlightedSlogan() { return this.campaignCopy ? this.campaignCopy : '<span class=\"text-slate-500 italic\">No copy entered yet.</span>'; } }">
 
   <!-- Global Banner Notice -->
   <div class="bg-brandBlue text-white text-center py-2.5 px-4 text-xs font-semibold tracking-wide border-b border-blue-700/50 h-10 block">
@@ -359,24 +359,14 @@
               <div class="text-xs mt-1.5 font-medium leading-relaxed" x-html="renderHighlightedSlogan()"></div>
             </div>
 
-            <!-- Issues List -->
             <div>
               <h3 class="text-xs font-mono font-bold text-slate-400 uppercase mb-3">Flagged Contextual Anomalies</h3>
-              <template x-if="results.flagged_issues.length === 0">
-                <div class="text-xs text-slate-500 italic py-4 border border-dashed rounded text-center" :class="darkMode ? 'border-slate-800' : 'border-slate-200'">
-                  Zero risk compliance triggers detected in input caption.
-                </div>
-              </template>
-              <div class="space-y-3">
-                <template x-for="issue in results.flagged_issues">
-                  <div class="p-3 rounded border" 
-                       :class="results.risk_level === 'Caution' ? 'bg-amber-500/5 border-amber-500/20' : 'bg-red-500/5 border-red-500/20'">
-                    <div class="flex justify-between items-center text-xs font-semibold mb-1">
-                      <span class="font-mono text-brandNeon" x-text="`“${issue.phrase}”`"></span>
-                      <span class="text-[10px] text-slate-500 uppercase tracking-wider font-mono" x-text="issue.category"></span>
-                    </div>
-                    <p class="text-xs text-slate-300" x-text="issue.rationale"></p>
-                  </div>
+              <div x-show="!results || !results.flagged_issues || results.flagged_issues.length === 0" class="text-xs text-slate-500 italic py-4 border border-dashed rounded text-center border-slate-200" :class="darkMode ? 'border-slate-800' : 'border-slate-200'">
+                Zero risk compliance triggers detected in input caption.
+              </div>
+              <div class="space-y-3" x-show="results && results.flagged_issues && results.flagged_issues.length > 0">
+                <template x-for="issue in (results ? results.flagged_issues : [])">
+                  <div class="p-3 rounded-lg border text-xs" :class="darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'" x-text="typeof issue === 'object' ? `${issue.phrase} (${issue.category}): ${issue.rationale}` : issue"></div>
                 </template>
               </div>
             </div>
