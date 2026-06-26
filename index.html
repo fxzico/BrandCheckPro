@@ -118,21 +118,37 @@ Return ONLY a valid JSON object matching this schema. No markdown formatting blo
           parsed.engine = 'api';
           return parsed;
         } else if (apiKey) {
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: promptText }] }],
-              generationConfig: { responseMimeType: "application/json" }
-            }),
-            signal: AbortSignal.timeout(15000)
-          });
-          if (!res.ok) throw new Error('Gemini API returned ' + res.status);
-          const data = await res.json();
+          const key = apiKey.trim();
+          let modelsToTry = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro'];
+          let res, data;
+          for (const model of modelsToTry) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+            res = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: promptText }] }]
+              }),
+              signal: AbortSignal.timeout(15000)
+            });
+            if (res.ok) {
+              data = await res.json();
+              break;
+            } else if (res.status !== 404) {
+              const errData = await res.json().catch(()=>({}));
+              throw new Error(errData.error?.message || `Gemini API returned ${res.status}`);
+            }
+          }
+          if (!data) throw new Error(`Models unavailable (404). Check if Generative Language API is enabled for your project.`);
+          
           let text = data.candidates[0].content.parts[0].text;
           text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-          let parsed = JSON.parse(text);
+          let parsed;
+          try {
+            parsed = JSON.parse(text);
+          } catch (e) {
+            throw new Error('AI returned malformed data. Please retry.');
+          }
           parsed.engine = 'api';
           return parsed;
         } else {
