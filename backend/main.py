@@ -73,10 +73,13 @@ async def get_system_health():
     }
 
 @app.post("/v1/analyze", response_model=AnalysisResponse)
-async def analyze_single_copy(payload: AnalysisRequest):
+async def analyze_single_copy(payload: AnalysisRequest, request: Request):
     """Evaluates single tracking instances for pre-crisis exposure."""
     try:
-        result = engine.analyze_copy(payload.text, payload.market)
+        auth_header = request.headers.get("Authorization")
+        client_key = auth_header.replace("Bearer ", "").strip() if auth_header else None
+        
+        result = engine.analyze_copy(payload.text, payload.market, api_key=client_key)
         return result
     except Exception as e:
         raise HTTPException(
@@ -85,12 +88,15 @@ async def analyze_single_copy(payload: AnalysisRequest):
         )
 
 @app.post("/v1/batch")
-async def analyze_batch_copy(payload: BatchAnalysisRequest):
+async def analyze_batch_copy(payload: BatchAnalysisRequest, request: Request):
     """Processes array vectors in parallel for automated pipeline operations."""
+    auth_header = request.headers.get("Authorization")
+    client_key = auth_header.replace("Bearer ", "").strip() if auth_header else None
+    
     batch_results = []
     for item in payload.payloads:
         start_time = time.time()
-        analysis = engine.analyze_copy(item.text, item.market)
+        analysis = engine.analyze_copy(item.text, item.market, api_key=client_key)
         batch_results.append({
             "text_preview": item.text[:30] + "...",
             "analysis": analysis,
