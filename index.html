@@ -68,13 +68,13 @@
 
           <div x-show="wizardStep === 1" class="space-y-4">
             <label class="block text-xs font-mono font-bold text-slate-400 uppercase">Brand / Product Context</label>
-            <textarea x-model="brandContext" @input="brandContextWarning = false" placeholder="e.g., A premium consumer beverage campaign promoting a summer festive discount..." class="w-full h-32 p-3 text-xs border rounded-lg bg-slate-900 border-slate-800 text-white focus:outline-none focus:border-[#38BDF8]/50"></textarea>
+            <textarea x-model="brandContext" @input="brandContextWarning = false" placeholder="e.g., A premium consumer beverage campaign promoting a summer festive discount..." class="w-full h-32 p-3 text-xs border rounded-lg bg-[#1E293B] border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-[#38BDF8]"></textarea>
             <div x-show="brandContextWarning" class="text-xs text-rose-500 font-semibold bg-rose-500/10 border border-rose-500/20 rounded p-2.5 mt-2" style="display: none;">Context details required to continue.</div>
           </div>
 
           <div x-show="wizardStep === 2" class="space-y-4" style="display: none;">
             <label class="block text-xs font-mono font-bold text-slate-400 uppercase">Target Market</label>
-            <select class="w-full p-3 text-xs border rounded-lg bg-slate-900 border-slate-800 text-white focus:outline-none">
+            <select class="w-full p-3 text-xs border rounded-lg bg-[#1E293B] border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-[#38BDF8]">
               <option>Whole India Market</option>
               <option>Tier 1 Hubs</option>
             </select>
@@ -82,14 +82,14 @@
 
           <div x-show="wizardStep === 3" class="space-y-4" style="display: none;">
             <label class="block text-xs font-mono font-bold text-slate-400 uppercase">Campaign Slogan</label>
-            <textarea x-model="campaignCopy" placeholder="Type slogan text here..." class="w-full h-24 p-3 text-xs border rounded-lg bg-slate-900 border-slate-800 text-white focus:outline-none"></textarea>
+            <textarea x-model="campaignCopy" placeholder="Type slogan text here..." class="w-full h-24 p-3 text-xs border rounded-lg bg-[#1E293B] border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-[#38BDF8]"></textarea>
           </div>
         </div>
 
         <div class="flex items-center gap-3 mt-8 pt-4 border-t border-slate-800">
-          <button x-show="wizardStep > 1" @click="wizardStep--" type="button" class="px-4 py-2 rounded text-xs font-semibold border border-slate-800 text-slate-300" style="display: none;">← Back</button>
-          <button x-show="wizardStep < 3" @click="nextStep()" type="button" class="flex-1 bg-[#2563EB] text-white py-2 rounded text-xs font-bold hover:opacity-95 transition">Next Step →</button>
-          <button x-show="wizardStep === 3" @click="runComplianceCheck()" type="button" class="flex-1 bg-[#38BDF8] text-slate-950 py-2 rounded text-xs font-extrabold hover:opacity-95 transition" style="display: none;">RUN COMPLIANCE CHECK</button>
+          <button x-show="wizardStep > 1" @click="wizardStep--" type="button" class="px-4 py-2 rounded text-xs font-semibold border border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800 transition duration-150" style="display: none;">← Back</button>
+          <button x-show="wizardStep < 3" @click="nextStep()" type="button" class="flex-1 bg-[#2563EB] text-white hover:bg-blue-700 font-bold py-2 px-4 rounded text-xs transition duration-150 text-center shadow-lg">Next Step →</button>
+          <button x-show="wizardStep === 3" @click="runComplianceCheck()" type="button" class="flex-1 bg-[#38BDF8] text-slate-950 hover:bg-[#7dd3fc] font-extrabold py-2 px-4 rounded text-xs transition duration-150 text-center shadow-md" style="display: none;">RUN COMPLIANCE CHECK</button>
         </div>
       </section>
 
@@ -125,10 +125,10 @@
   </main>
 
   <div x-show="authModal" class="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4" style="display: none;" @click.away="authModal = false">
-    <div class="border max-w-sm w-full p-6 rounded-xl bg-slate-900 border-slate-800 text-center">
+    <div class="border max-w-sm w-full p-8 rounded-xl bg-[#1E293B] border-slate-700 shadow-2xl relative text-center">
       <h3 class="text-lg font-bold text-white mb-2">Sign In</h3>
       <p class="text-xs text-slate-400 mb-4">Session validation required.</p>
-      <button @click="authModal = false" class="w-full bg-[#2563EB] text-white py-2 rounded text-xs font-bold">Close Window</button>
+      <button @click="authModal = false" class="w-full mt-4 bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded text-xs tracking-wide transition duration-150">Close Window</button>
     </div>
   </div>
 </body>
