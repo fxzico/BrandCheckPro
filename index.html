@@ -71,7 +71,7 @@
       return { overall_score: finalScore, risk_level: riskLevel, summary, flagged_issues: flagged, engine: 'local' };
     }
 
-    async function runAPIAnalysis(brandContext, demographics, campaignCopy, sensitivity, apiKey) {
+    async function runAPIAnalysis(brandContext, demographics, campaignCopy, sensitivity, apiKey, apiModel) {
       const combinedText = 'Brand Context: ' + brandContext + '\nTarget Market: ' + demographics + '\nCampaign Copy: ' + campaignCopy;
       const promptText = `You are BrandCheck Pro, analyzing marketing copy for cultural/social risk in India.
 ${combinedText}
@@ -100,11 +100,12 @@ Return ONLY a valid JSON object matching this schema. No markdown formatting blo
 
       try {
         if (apiKey && apiKey.startsWith('sk-or-')) {
+          const modelToUse = (apiModel && apiModel.trim()) ? apiModel.trim() : 'google/gemini-flash-1.5';
           const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              model: 'google/gemini-flash-1.5',
+              model: modelToUse,
               messages: [{ role: 'user', content: promptText }],
               response_format: { type: 'json_object' }
             }),
@@ -119,7 +120,7 @@ Return ONLY a valid JSON object matching this schema. No markdown formatting blo
           return parsed;
         } else if (apiKey) {
           const key = apiKey.trim();
-          let modelsToTry = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro'];
+          let modelsToTry = (apiModel && apiModel.trim()) ? [apiModel.trim()] : ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro'];
           let res, data;
           for (const model of modelsToTry) {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
@@ -192,6 +193,7 @@ Return ONLY a valid JSON object matching this schema. No markdown formatting blo
         brandContextWarning: false,
         user: null,
         cloudEngineKey: localStorage.getItem('BC_LIVE_CORE_KEY') || '',
+        cloudEngineModel: localStorage.getItem('BC_LIVE_CORE_MODEL') || '',
         showResults: false,
         loader: false,
         faqOpen: null,
@@ -210,10 +212,11 @@ Return ONLY a valid JSON object matching this schema. No markdown formatting blo
           this.showResults = false;
           this.inferenceStatus = 'Scanning socio-cultural risk matrices...';
           const apiKey = this.cloudEngineKey || '';
+          const apiModel = this.cloudEngineModel || '';
           let result = null;
           if (apiKey) {
             try {
-              result = await runAPIAnalysis(this.brandContext, this.demographics, this.campaignCopy, this.sensitivity, apiKey);
+              result = await runAPIAnalysis(this.brandContext, this.demographics, this.campaignCopy, this.sensitivity, apiKey, apiModel);
             } catch (err) {
               result = {
                 overall_score: 0,
@@ -463,11 +466,18 @@ Return ONLY a valid JSON object matching this schema. No markdown formatting blo
             placeholder="Paste your Google AI Studio or OpenRouter key..."
             class="w-full p-3 text-xs border rounded-lg bg-slate-900 border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-[#38BDF8]" />
         </div>
+        <div>
+          <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1.5">Model ID (Optional)</label>
+          <input type="text" x-model="cloudEngineModel"
+            placeholder="e.g. gemini-2.0-flash, anthropic/claude-3-opus..."
+            class="w-full p-3 text-xs border rounded-lg bg-slate-900 border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-[#38BDF8]" />
+          <p class="text-[9px] text-slate-500 mt-1">Leave blank to use robust defaults.</p>
+        </div>
         <div class="flex gap-2">
-          <button @click="localStorage.setItem('BC_LIVE_CORE_KEY', cloudEngineKey); connectionModal = false;"
+          <button @click="localStorage.setItem('BC_LIVE_CORE_KEY', cloudEngineKey); localStorage.setItem('BC_LIVE_CORE_MODEL', cloudEngineModel); connectionModal = false;"
             class="flex-1 bg-[#38BDF8] text-slate-950 hover:bg-[#7dd3fc] font-bold py-2 px-4 rounded text-xs transition duration-150 text-center shadow-md">⚡ Save & Activate</button>
-          <button @click="cloudEngineKey = ''; localStorage.removeItem('BC_LIVE_CORE_KEY'); connectionModal = false;"
-            class="px-4 py-2 rounded text-xs font-semibold border border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800 transition duration-150">Clear Key</button>
+          <button @click="cloudEngineKey = ''; cloudEngineModel = ''; localStorage.removeItem('BC_LIVE_CORE_KEY'); localStorage.removeItem('BC_LIVE_CORE_MODEL'); connectionModal = false;"
+            class="px-4 py-2 rounded text-xs font-semibold border border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800 transition duration-150">Clear Settings</button>
         </div>
       </div>
     </div>
