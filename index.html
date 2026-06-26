@@ -61,14 +61,8 @@
         }
       }
     }
-  <style>[x-cloak] { display: none !important; }</style>
 </head>
-<body 
-  class="transition-colors duration-200 font-sans antialiased" 
-  :class="darkMode ? 'dark bg-brandBgDark text-slate-100' : 'bg-brandBgLight text-slate-800'"
-  x-data="brandCheckApp()"
-  x-cloak
->
+<body class="transition-colors duration-200 font-sans antialiased bg-brandBgLight text-slate-800" :class="darkMode ? 'dark bg-brandBgDark text-slate-100' : 'bg-brandBgLight text-slate-800'" x-data="{ darkMode: true, privacyModal: false, connectionModal: false, authModal: false, premiumGateModal: false, wizardStep: 1, brandContext: '', campaignCopy: '', selectedEngine: 'tier1', sensitivity: 'Standard', brandContextWarning: false, user: null, cloudEngineKey: '', showResults: false, loader: false, faqOpen: null }">
 
   <!-- Global Banner Notice -->
   <div class="bg-brandBlue text-white text-center py-2.5 px-4 text-xs font-semibold tracking-wide border-b border-blue-700/50 h-10 block">
