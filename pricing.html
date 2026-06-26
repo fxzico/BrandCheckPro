@@ -100,7 +100,7 @@
        :class="darkMode ? 'border-slate-800 bg-brandBgDark/85 backdrop-blur-md' : 'border-slate-200 bg-brandBgLight/85 backdrop-blur-md'">
     <div class="max-w-6xl mx-auto flex justify-between items-center">
       <div class="flex items-center gap-3 cursor-pointer" onclick="window.location.href='index.html'">
-        <div class="w-3 h-3 bg-brandNeon rounded-full shadow-[0_0_10px_#38BDF8]"></div>
+        <div class="w-3 h-3 bg-brandNeon rounded-full shadow-[0_0_10px_#38BDF8]" style="width:12px; height:12px;"></div>
         <span class="text-xl font-bold tracking-tight font-display">BrandCheck <span class="text-brandNeon">Pro</span></span>
       </div>
       
@@ -144,7 +144,7 @@
         <!-- Signed-In State -->
         <div x-show="user" class="relative" @click.away="userDropdown = false" x-cloak>
           <button @click="userDropdown = !userDropdown" class="flex items-center gap-2 px-2.5 py-1 rounded-full border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-500/10 dark:hover:bg-slate-800 transition">
-            <img :src="user ? user.picture : ''" alt="User Avatar" class="w-5 h-5 rounded-full border border-brandNeon" referrerpolicy="no-referrer">
+            <img :src="user ? user.picture : ''" alt="User Avatar" class="w-5 h-5 rounded-full border border-brandNeon" referrerpolicy="no-referrer" style="width:20px; height:20px;">
             <span class="text-xs font-semibold text-slate-700 dark:text-slate-200" x-text="user ? user.given_name : ''"></span>
             <span class="text-[9px] text-slate-400 dark:text-slate-500">▼</span>
           </button>
