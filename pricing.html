@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pricing Plans — BrandCheck Pro</title>
+  
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    })();
+  </script>
+
+  <!-- CSS Assets -->
+  <link rel="stylesheet" href="assets/css/custom.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Sign-In SDK & Auth Utility -->
+  <script src="assets/js/auth.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <!-- JS Assets & Engine Core -->
+  <script src="assets/js/sandbox.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brandBgDark: '#0B0F19',
+            brandSurfaceDark: '#1E293B',
+            brandBgLight: '#F8FAFC',
+            brandSurfaceLight: '#FFFFFF',
+            brandNeon: '#38BDF8',
+            brandBlue: '#2563EB',
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body 
+  class="transition-colors duration-200 font-sans antialiased min-h-screen flex flex-col" 
+  :class="darkMode ? 'dark bg-brandBgDark text-slate-100' : 'bg-brandBgLight text-slate-800'"
+  x-data="{ 
+    darkMode: localStorage.getItem('theme') ? (localStorage.getItem('theme') === 'dark') : window.matchMedia('(prefers-color-scheme: dark)').matches, 
+    faqOpen: null, 
+    privacyModal: false,
+    connectionModal: false,
+    cloudEngineKey: localStorage.getItem('BC_LIVE_CORE_KEY') || '',
+    user: null,
+    authModal: false,
+    userDropdown: false,
+    currentTier: localStorage.getItem('BC_USER_TIER') || 'Free',
+    premiumGateModal: false,
+    activateProfessional() {
+      this.currentTier = 'Professional';
+      localStorage.setItem('BC_USER_TIER', 'Professional');
+      window.dispatchEvent(new CustomEvent('bc:tier:upgrade', { detail: 'Professional' }));
+      alert('🎉 Professional Tier Activated! Your dashboard now has full access.');
+    },
+    init() {
+      const existingUser = typeof getAuthUser === 'function' ? getAuthUser() : null;
+      if (existingUser) {
+        this.user = existingUser;
+      }
+      window.addEventListener('gauth:login', (e) => {
+        this.user = e.detail;
+        this.authModal = false;
+      });
+      window.addEventListener('gauth:logout', () => {
+        this.user = null;
+        this.userDropdown = false;
+      });
+    },
+    signOut() {
+      if (typeof signOutUser === 'function') {
+        signOutUser();
+      } else {
+        this.user = null;
+        this.userDropdown = false;
+        window.dispatchEvent(new CustomEvent('gauth:logout'));
+      }
+    }
+  }"
+>
+
+  <!-- Global Banner Notice -->
+  <div class="bg-brandBlue text-white text-center py-2.5 px-4 text-xs font-semibold tracking-wide border-b border-blue-700/50">
+    🔒 AGENCY SECURITY ACTIVE: Zero-Data Retention Pipeline enabled. Input payloads are processed entirely in volatile RAM and deleted immediately post-analysis.
+  </div>
+
+  <!-- Header Navigation -->
+  <nav class="border-b transition-colors duration-200 sticky top-0 z-40 px-6 py-4"
+       :class="darkMode ? 'border-slate-800 bg-brandBgDark/85 backdrop-blur-md' : 'border-slate-200 bg-brandBgLight/85 backdrop-blur-md'">
+    <div class="max-w-6xl mx-auto flex justify-between items-center">
+      <div class="flex items-center gap-3 cursor-pointer" onclick="window.location.href='index.html'">
+        <div class="w-3 h-3 bg-brandNeon rounded-full shadow-[0_0_10px_#38BDF8]"></div>
+        <span class="text-xl font-bold tracking-tight font-display">BrandCheck <span class="text-brandNeon">Pro</span></span>
+      </div>
+      
+      <div class="hidden md:flex items-center gap-8 text-sm font-medium">
+        <a href="index.html" :class="darkMode ? 'text-slate-300 hover:text-brandNeon' : 'text-slate-600 hover:text-brandNeon'" class="transition">Dashboard</a>
+        <a href="blog.html" :class="darkMode ? 'text-slate-300 hover:text-brandNeon' : 'text-slate-600 hover:text-brandNeon'" class="transition">Brand Stories</a>
+        <a href="origin.html" :class="darkMode ? 'text-slate-300 hover:text-brandNeon' : 'text-slate-600 hover:text-brandNeon'" class="transition">Origin</a>
+        <a href="pricing.html" class="text-brandNeon font-semibold transition">Pricing</a>
+        <a href="api-connector.html" :class="darkMode ? 'text-slate-300 hover:text-brandNeon' : 'text-slate-600 hover:text-brandNeon'" class="transition">Developer Portal</a>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <!-- Connection Status Indicator Pill -->
+        <span x-show="cloudEngineKey" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          LIVE AI PIPELINE
+        </span>
+
+        <!-- Connection Toggle -->
+        <button @click="connectionModal = true" class="p-2 rounded-full hover:bg-slate-500/10 transition relative group" aria-label="Connect Cloud Engine" title="Connect Cloud Engine">
+          <span class="text-slate-400 hover:text-brandNeon transition text-sm">⚙️</span>
+          <!-- Sleek tooltip -->
+          <span class="absolute top-10 right-0 scale-0 group-hover:scale-100 transition-all duration-100 bg-slate-800 text-[10px] text-white px-2 py-1 rounded font-mono whitespace-nowrap z-50">Connect Cloud Engine</span>
+        </button>
+
+        <!-- Theme Toggle -->
+        <button @click="darkMode = !darkMode; localStorage.setItem('theme', darkMode ? 'dark' : 'light'); if (darkMode) { document.documentElement.classList.add('dark'); } else { document.documentElement.classList.remove('dark'); }" class="p-2 rounded-full hover:bg-slate-500/10 transition relative group" aria-label="Toggle Theme" title="Toggle Theme">
+          <span x-show="darkMode" class="text-amber-400">☀️</span>
+          <span x-show="!darkMode" class="text-slate-400 hover:text-slate-600">🌙</span>
+          <span class="absolute top-10 right-0 scale-0 group-hover:scale-100 transition-all duration-100 bg-slate-800 text-[10px] text-white px-2 py-1 rounded font-mono whitespace-nowrap z-50">Toggle Theme</span>
+        </button>
+
+        <!-- Google OAuth Authentication Flow -->
+        <!-- Signed-Out State -->
+        <div x-show="!user">
+          <button @click="authModal = true" class="border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-500/10 font-semibold px-4 py-2 rounded-md text-xs transition">
+            Sign In
+          </button>
+        </div>
+
+        <!-- Signed-In State -->
+        <div x-show="user" class="relative" @click.away="userDropdown = false" x-cloak>
+          <button @click="userDropdown = !userDropdown" class="flex items-center gap-2 px-2.5 py-1 rounded-full border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-500/10 dark:hover:bg-slate-800 transition">
+            <img :src="user ? user.picture : ''" alt="User Avatar" class="w-5 h-5 rounded-full border border-brandNeon" referrerpolicy="no-referrer">
+            <span class="text-xs font-semibold text-slate-700 dark:text-slate-200" x-text="user ? user.given_name : ''"></span>
+            <span class="text-[9px] text-slate-400 dark:text-slate-500">▼</span>
+          </button>
+          
+          <!-- Dropdown Card -->
+          <div x-show="userDropdown" x-transition class="absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 z-50">
+            <div class="px-4 py-2 border-b border-slate-200 dark:border-slate-800">
+              <p class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate" x-text="user ? user.name : ''"></p>
+              <p class="text-[10px] text-slate-500 dark:text-slate-400 truncate" x-text="user ? user.email : ''"></p>
+            </div>
+            <button @click="signOut()" class="w-full text-left px-4 py-2 text-xs text-red-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition font-semibold">
+              Sign Out
+            </button>
+          </div>
+        </div>
+
+        <a href="pricing.html" class="bg-brandBlue text-white font-semibold px-4 py-2 rounded-md text-xs hover:opacity-90 transition shadow-lg shadow-blue-600/20">
+          Enterprise Access
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Pricing Sheet Body -->
+  <main class="max-w-5xl mx-auto py-16 px-6 flex-grow">
+    <div class="text-center max-w-3xl mx-auto mb-16">
+      <span class="text-xs font-mono font-bold tracking-widest text-brandNeon uppercase bg-brandNeon/10 px-3 py-1 rounded-full border border-brandNeon/20">PREDICTABLE PACKAGES</span>
+      <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mt-4" :class="darkMode ? 'text-white' : 'text-slate-900'">
+        Protect Brand Equity at Scale
+      </h1>
+      <p class="text-sm mt-3" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">
+        Objective, metrics-driven copywriting safety structures. Upgrade your pre-crisis defenses.
+      </p>
+    </div>
+
+    <!-- Pricing Grid Matrix -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch mb-20">
+      
+      <!-- Tier 1: Sandbox Free -->
+      <div class="p-6 rounded-xl border flex flex-col justify-between glass-card" :class="darkMode ? 'bg-brandSurfaceDark/25 border-slate-800' : 'bg-brandSurfaceLight border-slate-200 shadow-sm'">
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <h3 class="text-lg font-bold">Sandbox Free</h3>
+          </div>
+          <p class="text-xs text-slate-400">For localized copywriting checks.</p>
+          
+          <div class="text-3xl font-black my-6" :class="darkMode ? 'text-white' : 'text-slate-900'">
+            ₹0 <span class="text-xs font-normal text-slate-400">/ forever</span>
+          </div>
+          
+          <ul class="text-xs space-y-3 text-slate-400 mb-6">
+            <li class="flex items-center gap-2">
+              <span class="text-brandNeon font-bold font-mono">•</span>
+              10 Automated Scans Per Month
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-brandNeon font-bold font-mono">•</span>
+              Basic Heuristic Match Engine
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-brandNeon font-bold font-mono">•</span>
+              Core Indian Market Vetting
+            </li>
+          </ul>
+        </div>
+        <button class="w-full mt-auto py-2 rounded-lg border border-slate-700 text-xs font-semibold hover:bg-slate-800 transition" :class="darkMode ? 'text-slate-300' : 'text-slate-700 hover:bg-slate-100'">
+          Get Started
+        </button>
+      </div>
+
+      <!-- Tier 2: Professional (Pro Tier Focus) -->
+      <div class="p-6 rounded-xl border border-2 border-brandNeon relative flex flex-col justify-between glass-card shadow-2xl shadow-cyan-400/5" :class="darkMode ? 'bg-brandSurfaceDark/60' : 'bg-white'">
+        <span class="absolute -top-3.5 right-6 bg-brandNeon text-slate-950 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider font-mono">Most Popular</span>
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <h3 class="text-lg font-bold text-brandNeon">Professional</h3>
+          </div>
+          <p class="text-xs text-slate-400">For active agency copywriters and PR strategists.</p>
+          
+          <div class="text-3xl font-black my-6 text-brandNeon">
+            ₹3,999 <span class="text-xs font-normal text-slate-400">/ month</span>
+          </div>
+          
+          <ul class="text-xs space-y-3 mb-6" :class="darkMode ? 'text-slate-200' : 'text-slate-700'">
+            <li class="flex items-center gap-2">
+              <span class="text-brandNeon font-bold font-mono">✓</span>
+              <strong>Unlimited Tier-1 Engine Access</strong>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-brandNeon font-bold font-mono">✓</span>
+              Full Google AI Studio Integration
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-brandNeon font-bold font-mono">✓</span>
+              Sarcasm & Regional Slang Scanning
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-brandNeon font-bold font-mono">✓</span>
+              Chrome Extension Sidebar Support
+            </li>
+          </ul>
+        </div>
+        <button @click="activateProfessional()" class="w-full mt-auto bg-brandNeon text-slate-950 py-2.5 rounded-lg text-xs font-extrabold hover:opacity-90 transition shadow-lg shadow-cyan-400/20">
+          Upgrade to Professional
+        </button>
+      </div>
+
+      <!-- Tier 3: Enterprise -->
+      <div class="p-6 rounded-xl border flex flex-col justify-between glass-card" :class="darkMode ? 'bg-brandSurfaceDark/25 border-slate-800' : 'bg-brandSurfaceLight border-slate-200 shadow-sm'">
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <h3 class="text-lg font-bold">Enterprise</h3>
+          </div>
+          <p class="text-xs text-slate-400">For global conglomerate protection.</p>
+          
+          <div class="text-3xl font-black my-6" :class="darkMode ? 'text-white' : 'text-slate-900'">
+            Custom <span class="text-xs font-normal text-slate-400">/ billed annually</span>
+          </div>
+          
+          <ul class="text-xs space-y-3 text-slate-400 mb-6">
+            <li class="flex items-center gap-2">
+              <span class="text-brandNeon font-bold font-mono">•</span>
+              Zero-Data Retention SLA Guarantee
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-brandNeon font-bold font-mono">•</span>
+              Custom Corporate Brand Blocklists
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-brandNeon font-bold font-mono">•</span>
+              Dedicated Support Channels
+            </li>
+          </ul>
+        </div>
+        <button class="w-full mt-auto py-2 rounded-lg border border-slate-700 text-xs font-semibold hover:bg-slate-800 transition" :class="darkMode ? 'text-slate-300' : 'text-slate-700 hover:bg-slate-100'">
+          Contact Procurement
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Secondary Collapsible FAQs Section -->
+    <section class="border-t pt-16 max-w-3xl mx-auto" :class="darkMode ? 'border-slate-800/60' : 'border-slate-200'">
+      <h2 class="text-xl font-bold tracking-tight mb-8 text-center" :class="darkMode ? 'text-white' : 'text-slate-900'">Commercial & Billing FAQs</h2>
+      
+      <div class="space-y-4">
+        <div class="border rounded-lg overflow-hidden glass-card" :class="darkMode ? 'border-slate-800 bg-brandSurfaceDark/10' : 'border-slate-200 bg-white shadow-sm'">
+          <button @click="faqOpen = (faqOpen === 1 ? null : 1)" class="w-full text-left p-4 font-semibold text-xs md:text-sm flex justify-between items-center transition" :class="darkMode ? 'hover:bg-slate-800/20' : 'hover:bg-slate-100/50'">
+            <span>Can we pay in local currency (INR) and are taxes included?</span>
+            <span class="text-brandNeon font-bold" x-text="faqOpen === 1 ? '−' : '+'"></span>
+          </button>
+          <div class="accordion-content" :class="faqOpen === 1 ? 'open' : ''">
+            <div class="p-4 text-xs text-slate-400 leading-relaxed border-t bg-slate-950/20" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
+              Yes, all plan structures are priced in Indian Rupees (INR) for local agency operations. Standard GST rates are calculated and applied at checkout.
+            </div>
+          </div>
+        </div>
+
+        <div class="border rounded-lg overflow-hidden glass-card" :class="darkMode ? 'border-slate-800 bg-brandSurfaceDark/10' : 'border-slate-200 bg-white shadow-sm'">
+          <button @click="faqOpen = (faqOpen === 2 ? null : 2)" class="w-full text-left p-4 font-semibold text-xs md:text-sm flex justify-between items-center transition" :class="darkMode ? 'hover:bg-slate-800/20' : 'hover:bg-slate-100/50'">
+            <span>What happens when our sandbox free scan limit runs out?</span>
+            <span class="text-brandNeon font-bold" x-text="faqOpen === 2 ? '−' : '+'"></span>
+          </button>
+          <div class="accordion-content" :class="faqOpen === 2 ? 'open' : ''">
+            <div class="p-4 text-xs text-slate-400 leading-relaxed border-t bg-slate-950/20" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
+              Once your 10 monthly scans are exhausted, analysis requests will prompt a notification to upgrade to the Professional Tier. No automatic charges will be made.
+            </div>
+          </div>
+        </div>
+
+        <div class="border rounded-lg overflow-hidden glass-card" :class="darkMode ? 'border-slate-800 bg-brandSurfaceDark/10' : 'border-slate-200 bg-white shadow-sm'">
+          <button @click="faqOpen = (faqOpen === 3 ? null : 3)" class="w-full text-left p-4 font-semibold text-xs md:text-sm flex justify-between items-center transition" :class="darkMode ? 'hover:bg-slate-800/20' : 'hover:bg-slate-100/50'">
+            <span>Do you offer academic or researcher discounts?</span>
+            <span class="text-brandNeon font-bold" x-text="faqOpen === 3 ? '−' : '+'"></span>
+          </button>
+          <div class="accordion-content" :class="faqOpen === 3 ? 'open' : ''">
+            <div class="p-4 text-xs text-slate-400 leading-relaxed border-t bg-slate-950/20" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
+              Given our academic roots at IIMC Dhenkanal, we are proud to offer free, extended sandbox credentials to students, educators, and communication researchers. Contact our institutional outreach team.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Global Footer -->
+  <footer class="border-t text-xs py-12 px-6" :class="darkMode ? 'border-slate-800 bg-brandBgDark text-slate-500' : 'border-slate-200 bg-slate-50 text-slate-500'">
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+      <p>IIMC Origin Seed • Controversy Prediction • Linguistic Risk • Cultural Tripwires • Brand Safety AI • Context-Aware Analysis • Zero-Data Retention</p>
+      <div class="flex gap-6">
+        <button @click="privacyModal = true" class="hover:underline hover:text-brandNeon transition font-medium">Privacy Policy</button>
+        <span class="text-slate-700">|</span>
+        <a href="pricing.html" class="hover:underline hover:text-brandNeon transition">SLA Support Matrix</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Privacy Policy Modal Window Overlay -->
+  <div x-show="privacyModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4" x-cloak>
+    <div class="border max-w-lg w-full p-6 rounded-lg shadow-2xl relative" :class="darkMode ? 'bg-brandSurfaceDark border-slate-800' : 'bg-white border-slate-200'">
+      <div class="flex justify-between items-center mb-4 border-b pb-3" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
+        <h3 class="text-lg font-bold">Privacy Policy & Ephemeral RAM Pipeline</h3>
+        <button @click="privacyModal = false" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+      </div>
+      <div class="text-xs space-y-4 max-h-[60vh] overflow-y-auto pr-2" :class="darkMode ? 'text-slate-300' : 'text-slate-600'">
+        <p><strong>1. Volatile RAM Processing:</strong> All campaign slogans, marketing briefs, and copywriting inputs uploaded to the sandbox or Chrome Extension are parsed strictly in-memory (volatile RAM). No files, text logs, or cache indexes are generated or saved to physical drives.</p>
+        <p><strong>2. Immediate Memory Purge:</strong> The moment the API response payload is compiled and returned to the client request, the active execution thread is terminated, and the corresponding memory addresses are immediately cleared and garbage collected.</p>
+        <p><strong>3. Zero-Log Infrastructure:</strong> The system maintains no analytical databases, telemetry registers, or training pipelines. Your proprietary brand secrets and IP remain entirely isolated and secure from future leakage vectors.</p>
+      </div>
+      <button @click="privacyModal = false" class="w-full mt-6 bg-brandBlue text-white font-bold py-2 rounded text-xs tracking-wide hover:opacity-90 transition">
+        Understood & Acknowledged
+      </button>
+    </div>
+  </div>
+
+  <!-- BYOK Connection Modal -->
+  <div x-show="connectionModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex justify-center items-center p-4" x-cloak>
+    <div class="border max-w-lg w-full p-6 rounded-lg shadow-2xl relative" :class="darkMode ? 'bg-brandSurfaceDark border-slate-800' : 'bg-white border-slate-200'">
+      <div class="flex justify-between items-center mb-4 border-b pb-3" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
+        <h3 class="text-base font-bold tracking-tight" :class="darkMode ? 'text-white' : 'text-slate-900'">BYOK (Bring Your Own Key) Core Customization [Enterprise Feature Preview]</h3>
+        <button @click="connectionModal = false; cloudEngineKey = localStorage.getItem('BC_LIVE_CORE_KEY') || ''" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+      </div>
+      <p class="text-xs text-slate-400 mb-4 leading-relaxed">
+        BrandCheck Pro runs high-performance context evaluations instantly out of the box using our integrated processing network. For advanced corporate auditing, enterprise accounts can toggle this custom setting to route query strings securely through their own private Google AI Studio or OpenRouter endpoints.
+      </p>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-[10px] font-mono uppercase text-slate-500 mb-1.5">Cloud Core Secret API Key</label>
+          <input 
+            type="password" 
+            x-model="cloudEngineKey"
+            placeholder="Paste your OpenRouter or Cloud Engine Secret Key here..." 
+            class="w-full p-2.5 text-xs bg-slate-950/50 border rounded-lg focus:outline-none focus:border-brandNeon/50 transition font-sans placeholder-slate-700"
+            :class="darkMode ? 'border-slate-800 text-white' : 'border-slate-300 text-slate-900'"
+          />
+        </div>
+        <div class="flex gap-2">
+          <button 
+            @click="localStorage.setItem('BC_LIVE_CORE_KEY', cloudEngineKey); connectionModal = false; alert('Live AI Core Activated!');" 
+            class="flex-grow bg-brandNeon text-slate-950 font-bold py-2.5 rounded text-xs tracking-wide hover:opacity-90 transition shadow-lg shadow-cyan-400/20"
+          >
+            ⚡ Activate Live AI Core
+          </button>
+          <button 
+            @click="localStorage.removeItem('BC_LIVE_CORE_KEY'); cloudEngineKey = ''; connectionModal = false; alert('Live AI Core Disconnected.');" 
+            class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 px-4 rounded text-xs font-semibold transition"
+          >
+            Disconnect
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Google Authentication Modal Overlay (Luxury Dark Glassmorphism) -->
+  <div x-show="authModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex justify-center items-center p-4" x-cloak>
+    <div class="border max-w-md w-full p-8 rounded-2xl shadow-2xl relative bg-slate-950/70 border-slate-800/50 backdrop-blur-xl flex flex-col items-center text-center animate-fade-in" @click.away="authModal = false">
+      <!-- Close button -->
+      <button @click="authModal = false" class="absolute top-4 right-4 text-slate-400 hover:text-white transition text-2xl leading-none" aria-label="Close modal">&times;</button>
+      
+      <!-- Brand Logo Identity -->
+      <div class="w-12 h-12 rounded-full bg-brandBlue/10 border border-brandNeon/30 flex items-center justify-center mb-4 shadow-[0_0_15px_rgba(56,189,248,0.15)]">
+        <div class="w-4 h-4 bg-brandNeon rounded-full shadow-[0_0_8px_#38BDF8]"></div>
+      </div>
+      
+      <h3 class="text-xl font-bold tracking-tight text-white mb-1">Welcome to BrandCheck <span class="text-brandNeon">Pro</span></h3>
+      <p class="text-xs text-slate-400 mb-6 max-w-xs leading-relaxed">
+        Access the zero-data retention pipeline & corporate compliance dashboard.
+      </p>
+      
+      <!-- GIS Button Container with required parameters -->
+      <div class="w-full flex flex-col items-center py-5 bg-slate-900/40 rounded-xl border border-slate-800/40 mb-6">
+        <div id="g_id_onload"
+             data-client_id="1064735319019-9rvf3a587ih09fp5310c3fhnjibe8cp7.apps.googleusercontent.com"
+             data-callback="handleGoogleAuthCallback"
+             data-auto_prompt="false">
+        </div>
+        <div class="g_id_signin"
+             data-type="standard"
+             data-shape="rectangular"
+             data-theme="filled_black"
+             data-text="signin_with"
+             data-size="large"
+             data-logo_alignment="left">
+        </div>
+      </div>
+      
+      <p class="text-[10px] text-slate-500 leading-relaxed max-w-xs">
+        By continuing, you authorize temporary session validation. All campaign auditing is processed ephemerally in memory according to our SLA privacy guidelines.
+      </p>
+    </div>
+  </div>
+
+</body>
+</html>

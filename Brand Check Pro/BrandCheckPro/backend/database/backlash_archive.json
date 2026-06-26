@@ -1,0 +1,29 @@
+[
+  {
+    "id": "CRISIS-001",
+    "incident_summary": "Festive commercial campaign calling traditional values into question by introducing non-traditional phrasing, generating severe online Boycott trends.",
+    "market": "IN-HN",
+    "risk_category": "Religious Sensitivity",
+    "severity": "High",
+    "year": 2021,
+    "lessons_learned": "Avoid mixing contemporary subversion paradigms with long-standing cultural or festive terminology."
+  },
+  {
+    "id": "CRISIS-002",
+    "incident_summary": "Household appliance advertisement explicitly visualizing modern lifestyle tasks through an asymmetric class structure narrative.",
+    "market": "IN-NAT",
+    "risk_category": "Gender & Social Tone",
+    "severity": "Medium",
+    "year": 2020,
+    "lessons_learned": "Ensure messaging around support staff or manual service providers avoids implying patronizing hierarchies."
+  },
+  {
+    "id": "CRISIS-003",
+    "incident_summary": "Deodorant advertisement leveraging hyper-sexualized punchlines that triggered widespread structural regulatory intervention for offensive social tones.",
+    "market": "IN-NAT",
+    "risk_category": "Gender & Social Tone",
+    "severity": "Critical",
+    "year": 2022,
+    "lessons_learned": "Aggressively audit double entendres intersecting gender dynamics to ensure psychological safety profiles are maintained."
+  }
+]

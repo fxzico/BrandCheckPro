@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BrandCheck Pro — Enterprise Pre-Crisis Firewall</title>
+  
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    })();
+  </script>
+
+  <!-- CSS Assets -->
+  <link rel="stylesheet" href="assets/css/custom.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Sign-In SDK & Auth Utility -->
+  <script src="assets/js/auth.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <!-- JS Assets & Engine Core -->
+  <script src="assets/js/sandbox.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brandBgDark: '#0B0F19',
+            brandSurfaceDark: '#1E293B',
+            brandBgLight: '#F8FAFC',
+            brandSurfaceLight: '#FFFFFF',
+            brandNeon: '#38BDF8',
+            brandBlue: '#2563EB',
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body 
+  class="transition-colors duration-200 font-sans antialiased" 
+  :class="darkMode ? 'dark bg-brandBgDark text-slate-100' : 'bg-brandBgLight text-slate-800'"
+  x-data="brandCheckApp()"
+>
+
+  <!-- Global Banner Notice -->
+  <div class="bg-brandBlue text-white text-center py-2.5 px-4 text-xs font-semibold tracking-wide border-b border-blue-700/50">
+    🔒 AGENCY SECURITY ACTIVE: Zero-Data Retention Pipeline enabled. Input payloads are processed entirely in volatile RAM and deleted immediately post-analysis. No data footprints are generated or stored.
+  </div>
+
+  <!-- Header Navigation -->
+  <nav class="border-b transition-colors duration-200 sticky top-0 z-40 px-6 py-4"
+       :class="darkMode ? 'border-slate-800 bg-brandBgDark/85 backdrop-blur-md' : 'border-slate-200 bg-brandBgLight/85 backdrop-blur-md'">
+    <div class="max-w-6xl mx-auto flex justify-between items-center">
+      <div class="flex items-center gap-3 cursor-pointer" onclick="window.location.reload()">
+        <div class="w-3 h-3 bg-brandNeon rounded-full shadow-[0_0_10px_#38BDF8]"></div>
+        <span class="text-xl font-bold tracking-tight font-display">BrandCheck <span class="text-brandNeon">Pro</span></span>
+      </div>
+      
+      <div class="hidden md:flex items-center gap-8 text-sm font-medium">
+        <a href="index.html" class="text-brandNeon font-semibold transition">Dashboard</a>
+        <a href="blog.html" :class="darkMode ? 'text-slate-300 hover:text-brandNeon' : 'text-slate-600 hover:text-brandNeon'" class="transition">Brand Stories</a>
+        <a href="origin.html" :class="darkMode ? 'text-slate-300 hover:text-brandNeon' : 'text-slate-600 hover:text-brandNeon'" class="transition">Origin</a>
+        <a href="pricing.html" :class="darkMode ? 'text-slate-300 hover:text-brandNeon' : 'text-slate-600 hover:text-brandNeon'" class="transition">Pricing</a>
+        <a href="api-connector.html" :class="darkMode ? 'text-slate-300 hover:text-brandNeon' : 'text-slate-600 hover:text-brandNeon'" class="transition">Developer Portal</a>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <!-- Connection Status Indicator Pill -->
+        <span x-show="cloudEngineKey" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          LIVE AI PIPELINE
+        </span>
+
+        <!-- Connection Toggle -->
+        <button @click="connectionModal = true" class="p-2 rounded-full hover:bg-slate-500/10 transition relative group" aria-label="Connect Cloud Engine" title="Connect Cloud Engine">
+          <span class="text-slate-400 hover:text-brandNeon transition text-sm">⚙️</span>
+          <!-- Sleek tooltip -->
+          <span class="absolute top-10 right-0 scale-0 group-hover:scale-100 transition-all duration-100 bg-slate-800 text-[10px] text-white px-2 py-1 rounded font-mono whitespace-nowrap z-50">Connect Cloud Engine</span>
+        </button>
+
+        <!-- Theme Toggle -->
+        <button @click="darkMode = !darkMode; localStorage.setItem('theme', darkMode ? 'dark' : 'light'); if (darkMode) { document.documentElement.classList.add('dark'); } else { document.documentElement.classList.remove('dark'); }" class="p-2 rounded-full hover:bg-slate-500/10 transition relative group" aria-label="Toggle Theme" title="Toggle Theme">
+          <span x-show="darkMode" class="text-amber-400">☀️</span>
+          <span x-show="!darkMode" class="text-slate-400 hover:text-slate-600">🌙</span>
+          <span class="absolute top-10 right-0 scale-0 group-hover:scale-100 transition-all duration-100 bg-slate-800 text-[10px] text-white px-2 py-1 rounded font-mono whitespace-nowrap z-50">Toggle Theme</span>
+        </button>
+
+        <!-- Google OAuth Authentication Flow -->
+        <!-- Signed-Out State -->
+        <div x-show="!user">
+          <button @click="authModal = true" class="border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-500/10 font-semibold px-4 py-2 rounded-md text-xs transition">
+            Sign In
+          </button>
+        </div>
+
+        <!-- Signed-In State -->
+        <div x-show="user" class="relative" @click.away="userDropdown = false" x-cloak>
+          <button @click="userDropdown = !userDropdown" class="flex items-center gap-2 px-2.5 py-1 rounded-full border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-500/10 dark:hover:bg-slate-800 transition">
+            <img :src="user ? user.picture : ''" alt="User Avatar" class="w-5 h-5 rounded-full border border-brandNeon" referrerpolicy="no-referrer">
+            <span class="text-xs font-semibold text-slate-700 dark:text-slate-200" x-text="user ? user.given_name : ''"></span>
+            <span class="text-[9px] text-slate-400 dark:text-slate-500">▼</span>
+          </button>
+          
+          <!-- Dropdown Card -->
+          <div x-show="userDropdown" x-transition class="absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 z-50">
+            <div class="px-4 py-2 border-b border-slate-200 dark:border-slate-800">
+              <p class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate" x-text="user ? user.name : ''"></p>
+              <p class="text-[10px] text-slate-500 dark:text-slate-400 truncate" x-text="user ? user.email : ''"></p>
+            </div>
+            <button @click="signOut()" class="w-full text-left px-4 py-2 text-xs text-red-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition font-semibold">
+              Sign Out
+            </button>
+          </div>
+        </div>
+
+        <a href="pricing.html" class="bg-brandBlue text-white font-semibold px-4 py-2 rounded-md text-xs hover:opacity-90 transition shadow-lg shadow-blue-600/20">
+          Enterprise Access
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Workspace Dashboard & Sandbox -->
+  <main class="max-w-6xl mx-auto py-16 px-6">
+    <div class="mb-10 text-center md:text-left">
+      <span class="text-xs font-bold tracking-widest text-brandNeon uppercase bg-brandNeon/10 px-3 py-1 rounded-full border border-brandNeon/20">Product Workspace Dashboard</span>
+      <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mt-4" :class="darkMode ? 'text-white' : 'text-slate-900'">
+        Linguistic Compliance Sandbox
+      </h1>
+      <p class="text-sm mt-2 max-w-xl" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">
+        Stress-test your marketing copy against socio-cultural, religious, and political risk anomalies.
+      </p>
+    </div>
+
+    <!-- Live Workspace Split Pane -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-20">
+      
+      <!-- LEFT PANEL: 3-Step Conversational Input Wizard -->
+      <section class="lg:col-span-5 glass-card rounded-xl p-6 flex flex-col justify-between" :class="darkMode ? 'bg-brandSurfaceDark/40' : 'bg-brandSurfaceLight shadow-sm'">
+        <div>
+          <!-- Wizard Header -->
+          <div class="flex items-center justify-between border-b pb-4 mb-6" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
+            <h2 class="text-sm font-mono font-bold tracking-wider text-brandNeon">INPUT CONFIGURATION</h2>
+            <span class="text-xs font-mono text-slate-500" x-text="`Step ${wizardStep} of 3`"></span>
+          </div>
+
+          <!-- STEP 1 VIEW -->
+          <div x-show="wizardStep === 1" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-x-2" x-transition:enter-end="opacity-100 transform translate-x-0" class="space-y-4">
+            <label class="block text-xs font-mono font-bold tracking-wide text-slate-400 uppercase">Brand / Product Context</label>
+            <textarea 
+              x-model="brandContext"
+              @input="brandContextWarning = false"
+              placeholder="e.g., A premium consumer beverage campaign promoting a summer festive discount for urban families..." 
+              class="w-full h-32 p-3 text-xs bg-slate-950/50 border rounded-lg focus:outline-none focus:border-brandNeon/50 transition font-sans placeholder-slate-600"
+              :class="darkMode ? 'border-slate-800 text-white' : 'border-slate-300 text-slate-900'"
+            ></textarea>
+            <div x-show="brandContextWarning" x-transition class="text-xs text-rose-500 font-semibold bg-rose-500/10 border border-rose-500/20 rounded p-2.5 mt-2">
+              Please provide a brand name, website URL, or product category context to help the engine accurately calibrate safety thresholds.
+            </div>
+            <p class="text-[11px] text-slate-500">Provide high-level campaign context to calibrate standard model safety thresholds.</p>
+          </div>
+
+          <!-- STEP 2 VIEW -->
+          <div x-show="wizardStep === 2" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-x-2" x-transition:enter-end="opacity-100 transform translate-x-0" class="space-y-4">
+            <label class="block text-xs font-mono font-bold tracking-wide text-slate-400 uppercase">Target Demographics & Region</label>
+            <select 
+              x-model="demographics"
+              class="w-full p-3 text-xs bg-slate-950 border rounded-lg focus:outline-none focus:border-brandNeon/50 transition"
+              :class="darkMode ? 'border-slate-800 text-white' : 'border-slate-300 text-slate-900'"
+            >
+              <option value="Whole India Market">Whole India Market</option>
+              <option value="Tier 1 Market">Tier 1 Market</option>
+              <option value="Tier 2 Market">Tier 2 Market</option>
+              <option value="Tier 3 Market and Beyond">Tier 3 Market and Beyond</option>
+              <option value="Other (Specify)">Other (Specify)</option>
+            </select>
+            <p class="text-[11px] text-slate-500">Aligning regions updates regional double-entendres and socio-political indexes.</p>
+          </div>
+
+          <!-- STEP 3 VIEW -->
+          <div x-show="wizardStep === 3" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-x-2" x-transition:enter-end="opacity-100 transform translate-x-0" class="space-y-4">
+            <!-- Campaign copy text area -->
+            <div>
+              <label class="block text-xs font-mono font-bold tracking-wide text-slate-400 uppercase mb-2">Campaign Copy / Slogan</label>
+              <textarea 
+                x-model="campaignCopy"
+                placeholder="Type or paste copy slogan text here to evaluate..." 
+                class="w-full h-24 p-3 text-xs bg-slate-950/50 border rounded-lg focus:outline-none focus:border-brandNeon/50 transition font-sans placeholder-slate-600"
+                :class="darkMode ? 'border-slate-800 text-white' : 'border-slate-300 text-slate-900'"
+              ></textarea>
+            </div>
+            
+            <!-- Analysis Engine Selection -->
+            <div>
+              <label class="block text-xs font-mono font-bold tracking-wide text-slate-400 uppercase mb-2">Analysis Engine</label>
+              <select 
+                x-model="selectedEngine"
+                class="w-full p-2.5 text-xs bg-slate-950 border rounded-lg focus:outline-none focus:border-brandNeon/50 transition"
+                :class="darkMode ? 'border-slate-800 text-white' : 'border-slate-300 text-slate-900'"
+              >
+                <option value="tier1">High-Priority Engine (Recommended)</option>
+                <option value="standard">Standard Contextual Core</option>
+                <option value="advanced">Multi-Pass Advanced Reasoning</option>
+              </select>
+            </div>
+
+            <!-- Risk Sensitivity Levels -->
+            <div>
+              <label class="block text-xs font-mono font-bold tracking-wide text-slate-400 uppercase mb-2">Risk Sensitivity Level</label>
+              <div class="flex gap-2">
+                <template x-for="lvl in ['Low', 'Standard', 'Maximum']">
+                  <button 
+                    @click="sensitivity = lvl"
+                    type="button"
+                    class="flex-1 py-1.5 rounded text-xs font-medium border transition"
+                    :class="sensitivity === lvl ? 'bg-brandBlue text-white border-brandBlue' : (darkMode ? 'border-slate-800 text-slate-400 hover:border-slate-700' : 'border-slate-200 text-slate-600 hover:border-slate-300')"
+                    x-text="lvl"
+                  ></button>
+                </template>
+              </div>
+            </div>
+
+            <!-- Advanced Sarcasm / Dialect Analysis Filter (Pro Feature Gate) -->
+            <div>
+              <div class="flex items-center justify-between p-3 rounded-lg border transition"
+                   :class="darkMode ? 'border-slate-800 bg-slate-900/40' : 'border-slate-200 bg-slate-50'">
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-mono font-bold tracking-wide text-slate-400 uppercase">Sarcasm &amp; Dialect Filter</span>
+                  <span class="text-[10px] text-slate-500 leading-tight">Advanced regional slang &amp; irony detection</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="premium-badge">Pro</span>
+                  <button
+                    @click="tryToggleSarcasm()"
+                    type="button"
+                    class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none"
+                    :class="sarcasmFilterEnabled ? 'bg-brandNeon' : (darkMode ? 'bg-slate-700' : 'bg-slate-300')"
+                    :aria-checked="sarcasmFilterEnabled"
+                    role="switch"
+                    aria-label="Toggle Sarcasm Filter"
+                  >
+                    <span
+                      class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform duration-200"
+                      :class="sarcasmFilterEnabled ? 'translate-x-4' : 'translate-x-0.5'"
+                    ></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Wizard Navigation Buttons -->
+        <div class="flex items-center gap-3 mt-8 pt-4 border-t" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
+          <button 
+            x-show="wizardStep > 1"
+            @click="wizardStep--"
+            type="button"
+            class="px-4 py-2 rounded text-xs font-semibold border transition hover:opacity-85"
+            :class="darkMode ? 'border-slate-800 text-slate-300' : 'border-slate-300 text-slate-700'"
+          >
+            ← Back
+          </button>
+          
+          <button 
+            x-show="wizardStep < 3"
+            @click="nextStep()"
+            type="button"
+            class="flex-1 bg-brandBlue text-white py-2 rounded text-xs font-bold hover:opacity-95 transition text-center shadow-lg shadow-blue-600/10"
+          >
+            Next Step →
+          </button>
+          
+          <button 
+            x-show="wizardStep === 3"
+            @click="runComplianceCheck()"
+            type="button"
+            class="flex-1 bg-brandNeon text-slate-950 py-2 rounded text-xs font-extrabold hover:opacity-95 transition text-center shadow-lg shadow-cyan-400/10"
+          >
+            RUN COMPLIANCE CHECK
+          </button>
+        </div>
+      </section>
+
+      <!-- RIGHT PANEL: Live Visual Results Terminal -->
+      <section class="lg:col-span-7 glass-card rounded-xl p-6 flex flex-col justify-between min-h-[400px]" :class="darkMode ? 'bg-brandSurfaceDark/40' : 'bg-brandSurfaceLight shadow-sm'">
+        <div>
+          <!-- Panel Header -->
+          <div class="flex items-center justify-between border-b pb-4 mb-6" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
+            <h2 class="text-sm font-mono font-bold tracking-wider text-brandNeon">COMPLIANCE ANALYSIS OUTPUT</h2>
+            <div class="flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full" :class="inferenceStatus.includes('Offline') ? 'bg-amber-500' : 'bg-emerald-500 animate-ping'"></span>
+              <span class="text-[10px] font-mono text-slate-400" x-text="inferenceStatus">Inference Core Ready</span>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div x-show="!loader && !showResults" class="flex flex-col items-center justify-center py-20 text-center">
+            <div class="w-12 h-12 rounded-full flex items-center justify-center mb-4 bg-slate-950/60 border" :class="darkMode ? 'border-slate-800' : 'border-slate-200'">
+              <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+              </svg>
+            </div>
+            <h3 class="text-xs font-mono font-bold text-slate-400 uppercase">Awaiting Compliance Execution</h3>
+            <p class="text-[11px] text-slate-500 max-w-xs mt-1">Configure inputs in the wizard panel and click run compliance to generate evaluation metrics.</p>
+          </div>
+
+          <!-- Loading State Animation -->
+          <div x-show="loader" class="flex flex-col items-center justify-center py-20 text-center">
+            <div class="w-8 h-8 rounded-full border-2 border-slate-700 border-t-brandNeon animate-spin mb-4"></div>
+            <p class="text-xs font-mono text-slate-400">Simulating Public Response Matrices...</p>
+          </div>
+
+          <!-- Results Render State -->
+          <div x-show="showResults && !loader" class="space-y-6">
+            <!-- Score Gauge -->
+            <div class="flex flex-col md:flex-row items-center gap-6 p-4 bg-slate-950/40 border rounded-lg" :class="darkMode ? 'border-slate-800' : 'border-slate-200'">
+              <div class="w-20 h-20 rounded-full border-4 flex flex-col items-center justify-center flex-shrink-0"
+                   :class="results.overall_score >= 90 ? 'border-emerald-500 text-emerald-400' : (results.overall_score >= 70 ? 'border-amber-500 text-amber-400' : 'border-red-500 text-red-400')">
+                <span class="text-2xl font-black" x-text="results.overall_score"></span>
+                <span class="text-[9px] font-bold font-mono">SCORE</span>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-mono font-bold uppercase tracking-wider text-slate-400">Threat Evaluation:</span>
+                  <span class="text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded font-mono"
+                        :class="results.risk_level.includes('Safe') ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : (results.risk_level === 'Caution' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20')"
+                        x-text="results.risk_level"></span>
+                </div>
+                <p class="text-xs mt-2" :class="darkMode ? 'text-slate-300' : 'text-slate-600'" x-text="results.summary"></p>
+              </div>
+            </div>
+
+            <!-- Slogan Preview Zone -->
+            <div class="p-4 bg-slate-950/30 border rounded-lg" :class="darkMode ? 'border-slate-800' : 'border-slate-200'">
+              <span class="text-[10px] font-mono uppercase text-slate-500">Evaluated Copy Slogan</span>
+              <div class="text-xs mt-1.5 font-medium leading-relaxed" x-html="renderHighlightedSlogan()"></div>
+            </div>
+
+            <!-- Issues List -->
+            <div>
+              <h3 class="text-xs font-mono font-bold text-slate-400 uppercase mb-3">Flagged Contextual Anomalies</h3>
+              <template x-if="results.flagged_issues.length === 0">
+                <div class="text-xs text-slate-500 italic py-4 border border-dashed rounded text-center" :class="darkMode ? 'border-slate-800' : 'border-slate-200'">
+                  Zero risk compliance triggers detected in input caption.
+                </div>
+              </template>
+              <div class="space-y-3">
+                <template x-for="issue in results.flagged_issues">
+                  <div class="p-3 rounded border" 
+                       :class="results.risk_level === 'Caution' ? 'bg-amber-500/5 border-amber-500/20' : 'bg-red-500/5 border-red-500/20'">
+                    <div class="flex justify-between items-center text-xs font-semibold mb-1">
+                      <span class="font-mono text-brandNeon" x-text="`“${issue.phrase}”`"></span>
+                      <span class="text-[10px] text-slate-500 uppercase tracking-wider font-mono" x-text="issue.category"></span>
+                    </div>
+                    <p class="text-xs text-slate-300" x-text="issue.rationale"></p>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Demo Shortcut Button -->
+        <div class="mt-8 pt-4 border-t flex justify-end" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
+          <button 
+            @click="brandContext='Holiday promotional advertisement campaigns for family-owned stores'; demographics='Tier 1 Market'; campaignCopy='Our sacred festive sale brings you cheap deals on modern home assets!'; selectedEngine='tier1'; sensitivity='Standard'; runComplianceCheck()"
+            type="button"
+            class="text-[11px] font-mono text-brandNeon hover:underline"
+          >
+            ⚡ Load Demo Risk Payload & Run
+          </button>
+        </div>
+      </section>
+
+    </div>
+
+
+
+    <!-- Collapsible FAQ Accordion Section -->
+    <section class="py-20 border-t" :class="darkMode ? 'border-slate-800/60' : 'border-slate-200'">
+      <h2 class="text-2xl font-bold tracking-tight text-center mb-10" :class="darkMode ? 'text-white' : 'text-slate-900'">Frequently Asked Questions</h2>
+      <div class="max-w-3xl mx-auto space-y-4">
+        
+        <div class="border rounded-lg overflow-hidden glass-card" :class="darkMode ? 'border-slate-800 bg-brandSurfaceDark/10' : 'border-slate-200 bg-white shadow-sm'">
+          <button @click="faqOpen = (faqOpen === 1 ? null : 1)" class="w-full text-left p-4 font-semibold text-xs md:text-sm flex justify-between items-center transition" :class="darkMode ? 'hover:bg-slate-800/20' : 'hover:bg-slate-100/50'">
+            <span>How does BrandCheck Pro catch sarcasm or cultural nuances that normal LLMs miss?</span>
+            <span class="text-brandNeon font-bold" x-text="faqOpen === 1 ? '−' : '+'"></span>
+          </button>
+          <div class="accordion-content" :class="faqOpen === 1 ? 'open' : ''">
+            <div class="p-4 text-xs text-slate-400 leading-relaxed border-t bg-slate-950/20" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
+              Generic LLMs look for keyword matches or generalized sentiment. BrandCheck Pro utilizes a multi-tiered localized architecture. It runs input copy against a proprietary vector database containing a trailing 5-year archive of localized Indian ad controversies, regional double-entendres, and high-friction socio-political keyword ledgers to flag risks before they manifest.
+            </div>
+          </div>
+        </div>
+
+        <div class="border rounded-lg overflow-hidden glass-card" :class="darkMode ? 'border-slate-800 bg-brandSurfaceDark/10' : 'border-slate-200 bg-white shadow-sm'">
+          <button @click="faqOpen = (faqOpen === 2 ? null : 2)" class="w-full text-left p-4 font-semibold text-xs md:text-sm flex justify-between items-center transition" :class="darkMode ? 'hover:bg-slate-800/20' : 'hover:bg-slate-100/50'">
+            <span>What is your data retention policy? (Is our copy safe?)</span>
+            <span class="text-brandNeon font-bold" x-text="faqOpen === 2 ? '−' : '+'"></span>
+          </button>
+          <div class="accordion-content" :class="faqOpen === 2 ? 'open' : ''">
+            <div class="p-4 text-xs text-slate-400 leading-relaxed border-t bg-slate-950/20" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
+              BrandCheck Pro enforces a strict Zero-Data Retention policy at the enterprise tier. Your ad copy, slogans, and campaign briefs are processed in-memory via encrypted HTTPS API pipelines and are never cached, stored, or used to train public foundational AI models. Your intellectual property remains entirely yours.
+            </div>
+          </div>
+        </div>
+
+        <div class="border rounded-lg overflow-hidden glass-card" :class="darkMode ? 'border-slate-800 bg-brandSurfaceDark/10' : 'border-slate-200 bg-white shadow-sm'">
+          <button @click="faqOpen = (faqOpen === 3 ? null : 3)" class="w-full text-left p-4 font-semibold text-xs md:text-sm flex justify-between items-center transition" :class="darkMode ? 'hover:bg-slate-800/20' : 'hover:bg-slate-100/50'">
+            <span>Does the plugin slow down production workflows?</span>
+            <span class="text-brandNeon font-bold" x-text="faqOpen === 3 ? '−' : '+'"></span>
+          </button>
+          <div class="accordion-content" :class="faqOpen === 3 ? 'open' : ''">
+            <div class="p-4 text-xs text-slate-400 leading-relaxed border-t bg-slate-950/20" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
+              No. The Chrome Extension runs via asynchronous web workers. It initiates analysis only on user command (via a keyboard shortcut or button click) and returns a complete risk profile, numerical safety score, and contextual tooltips in under 1.8 seconds.
+            </div>
+          </div>
+        </div>
+
+        <div class="border rounded-lg overflow-hidden glass-card" :class="darkMode ? 'border-slate-800 bg-brandSurfaceDark/10' : 'border-slate-200 bg-white shadow-sm'">
+          <button @click="faqOpen = (faqOpen === 4 ? null : 4)" class="w-full text-left p-4 font-semibold text-xs md:text-sm flex justify-between items-center transition" :class="darkMode ? 'hover:bg-slate-800/20' : 'hover:bg-slate-100/50'">
+            <span>Can we customize the evaluation parameters?</span>
+            <span class="text-brandNeon font-bold" x-text="faqOpen === 4 ? '−' : '+'"></span>
+          </button>
+          <div class="accordion-content" :class="faqOpen === 4 ? 'open' : ''">
+            <div class="p-4 text-xs text-slate-400 leading-relaxed border-t bg-slate-950/20" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
+              Yes. While the core MVP assesses copy across our four standardized pillars (Religious Sensitivity, Political Neutrality, Social Tone, and Sarcasm), the enterprise architecture is designed to ingest custom brand guidelines and proprietary corporate blocklists.
+            </div>
+          </div>
+        </div>
+
+        <div class="border rounded-lg overflow-hidden glass-card" :class="darkMode ? 'border-slate-800 bg-brandSurfaceDark/10' : 'border-slate-200 bg-white shadow-sm'">
+          <button @click="faqOpen = (faqOpen === 5 ? null : 5)" class="w-full text-left p-4 font-semibold text-xs md:text-sm flex justify-between items-center transition" :class="darkMode ? 'hover:bg-slate-800/20' : 'hover:bg-slate-100/50'">
+            <span>How does the system adapt to regional shifts or festival compliance seasons across Indian sub-markets?</span>
+            <span class="text-brandNeon font-bold" x-text="faqOpen === 5 ? '−' : '+'"></span>
+          </button>
+          <div class="accordion-content" :class="faqOpen === 5 ? 'open' : ''">
+            <div class="p-4 text-xs text-slate-400 leading-relaxed border-t bg-slate-950/20" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
+              The engine dynamically alters internal category weights based on the demographic inputs specified in Step 2, adjusting risk profiles for regional micro-campaign contexts.
+            </div>
+          </div>
+        </div>
+
+        <div class="border rounded-lg overflow-hidden glass-card" :class="darkMode ? 'border-slate-800 bg-brandSurfaceDark/10' : 'border-slate-200 bg-white shadow-sm'">
+          <button @click="faqOpen = (faqOpen === 6 ? null : 6)" class="w-full text-left p-4 font-semibold text-xs md:text-sm flex justify-between items-center transition" :class="darkMode ? 'hover:bg-slate-800/20' : 'hover:bg-slate-100/50'">
+            <span>Can BrandCheck Pro detect dialect-specific double meanings or local colloquial slang expressions?</span>
+            <span class="text-brandNeon font-bold" x-text="faqOpen === 6 ? '−' : '+'"></span>
+          </button>
+          <div class="accordion-content" :class="faqOpen === 6 ? 'open' : ''">
+            <div class="p-4 text-xs text-slate-400 leading-relaxed border-t bg-slate-950/20" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
+              Yes, the advanced processing layer screens text strings against localized urban colloquial structures and dialect matrices to catch alternative linguistic definitions before public rollout.
+            </div>
+          </div>
+        </div>
+
+        <div class="border rounded-lg overflow-hidden glass-card" :class="darkMode ? 'border-slate-800 bg-brandSurfaceDark/10' : 'border-slate-200 bg-white shadow-sm'">
+          <button @click="faqOpen = (faqOpen === 7 ? null : 7)" class="w-full text-left p-4 font-semibold text-xs md:text-sm flex justify-between items-center transition" :class="darkMode ? 'hover:bg-slate-800/20' : 'hover:bg-slate-100/50'">
+            <span>Is this platform compliant with corporate risk assessment policies and data privacy rules?</span>
+            <span class="text-brandNeon font-bold" x-text="faqOpen === 7 ? '−' : '+'"></span>
+          </button>
+          <div class="accordion-content" :class="faqOpen === 7 ? 'open' : ''">
+            <div class="p-4 text-xs text-slate-400 leading-relaxed border-t bg-slate-950/20" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
+              Absolutely. Because our underlying network infrastructure utilizes a Zero-Data Retention design, text data is never cached, stored, or processed beyond volatile session memory, fulfilling strict enterprise privacy criteria.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Global Footer -->
+  <footer class="border-t text-xs py-12 px-6" :class="darkMode ? 'border-slate-800 bg-brandBgDark text-slate-500' : 'border-slate-200 bg-slate-50 text-slate-500'">
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+      <p>IIMC Origin Seed • Controversy Prediction • Linguistic Risk • Cultural Tripwires • Brand Safety AI • Context-Aware Analysis • Zero-Data Retention</p>
+      <div class="flex gap-6">
+        <button @click="privacyModal = true" class="hover:underline hover:text-brandNeon transition font-medium">Privacy Policy</button>
+        <span class="text-slate-700">|</span>
+        <a href="pricing.html" class="hover:underline hover:text-brandNeon transition">SLA Support Matrix</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Low-Visibility Privacy Policy Modal Window Overlay -->
+  <div x-show="privacyModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4" x-cloak>
+    <div class="border max-w-lg w-full p-6 rounded-lg shadow-2xl relative" :class="darkMode ? 'bg-brandSurfaceDark border-slate-800' : 'bg-white border-slate-200'">
+      <div class="flex justify-between items-center mb-4 border-b pb-3" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
+        <h3 class="text-lg font-bold">Privacy Policy & Ephemeral RAM Pipeline</h3>
+        <button @click="privacyModal = false" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+      </div>
+      <div class="text-xs space-y-4 max-h-[60vh] overflow-y-auto pr-2" :class="darkMode ? 'text-slate-300' : 'text-slate-600'">
+        <p><strong>1. Volatile RAM Processing:</strong> All campaign slogans, marketing briefs, and copywriting inputs uploaded to the sandbox or Chrome Extension are parsed strictly in-memory (volatile RAM). No files, text logs, or cache indexes are generated or saved to physical drives.</p>
+        <p><strong>2. Immediate Memory Purge:</strong> The moment the API response payload is compiled and returned to the client request, the active execution thread is terminated, and the corresponding memory addresses are immediately cleared and garbage collected.</p>
+        <p><strong>3. Zero-Log Infrastructure:</strong> The system maintains no analytical databases, telemetry registers, or training pipelines. Your proprietary brand secrets and IP remain entirely isolated and secure from future leakage vectors.</p>
+        <p><strong>4. Local Offline Sandbox option:</strong> To enable maximum privacy, you can run the workspace entirely offline by configuring your execution scripts locally, bypassing network API calls altogether.</p>
+      </div>
+      <button @click="privacyModal = false" class="w-full mt-6 bg-brandBlue text-white font-bold py-2 rounded text-xs tracking-wide hover:opacity-90 transition">
+        Understood & Acknowledged
+      </button>
+    </div>
+  </div>
+
+  <!-- Live Infrastructure Pipeline Connection Modal -->
+  <div x-show="connectionModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex justify-center items-center p-4" x-cloak>
+    <div class="border max-w-lg w-full p-6 rounded-lg shadow-2xl relative" :class="darkMode ? 'bg-brandSurfaceDark border-slate-800' : 'bg-white border-slate-200'">
+      <div class="flex justify-between items-center mb-4 border-b pb-3" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
+        <h3 class="text-base font-bold tracking-tight" :class="darkMode ? 'text-white' : 'text-slate-900'">BYOK (Bring Your Own Key) Core Customization [Enterprise Feature Preview]</h3>
+        <button @click="connectionModal = false; cloudEngineKey = localStorage.getItem('BC_LIVE_CORE_KEY') || ''" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+      </div>
+      <p class="text-xs text-slate-400 mb-4 leading-relaxed">
+        BrandCheck Pro runs high-performance context evaluations instantly out of the box using our integrated processing network. For advanced corporate auditing, enterprise accounts can toggle this custom setting to route query strings securely through their own private Google AI Studio or OpenRouter endpoints.
+      </p>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-[10px] font-mono uppercase text-slate-500 mb-1.5">Cloud Core Secret API Key</label>
+          <input 
+            type="password" 
+            x-model="cloudEngineKey"
+            placeholder="Paste your OpenRouter or Cloud Engine Secret Key here..." 
+            class="w-full p-2.5 text-xs bg-slate-950/50 border rounded-lg focus:outline-none focus:border-brandNeon/50 transition font-sans placeholder-slate-700"
+            :class="darkMode ? 'border-slate-800 text-white' : 'border-slate-300 text-slate-900'"
+          />
+        </div>
+        <div class="flex gap-2">
+          <button 
+            @click="localStorage.setItem('BC_LIVE_CORE_KEY', cloudEngineKey); connectionModal = false; alert('Live AI Core Activated!');" 
+            class="flex-grow bg-brandNeon text-slate-950 font-bold py-2.5 rounded text-xs tracking-wide hover:opacity-90 transition shadow-lg shadow-cyan-400/20"
+          >
+            ⚡ Activate Live AI Core
+          </button>
+          <button 
+            @click="localStorage.removeItem('BC_LIVE_CORE_KEY'); cloudEngineKey = ''; connectionModal = false; alert('Live AI Core Disconnected.');" 
+            class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 px-4 rounded text-xs font-semibold transition"
+          >
+            Disconnect
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Premium Feature Gate Modal -->
+  <div x-show="premiumGateModal" class="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex justify-center items-center p-4" x-cloak>
+    <div class="border max-w-sm w-full p-7 rounded-2xl shadow-2xl relative bg-slate-950/80 border-amber-500/30 backdrop-blur-xl flex flex-col items-center text-center animate-fade-in" @click.away="premiumGateModal = false">
+      <!-- Close -->
+      <button @click="premiumGateModal = false" class="absolute top-4 right-4 text-slate-400 hover:text-white transition text-2xl leading-none" aria-label="Close">&times;</button>
+      <!-- Crown icon -->
+      <div class="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/40 flex items-center justify-center mb-4 shadow-[0_0_18px_rgba(245,158,11,0.2)]">
+        <span class="text-xl">👑</span>
+      </div>
+      <h3 class="text-lg font-bold tracking-tight text-white mb-1">Professional Feature</h3>
+      <p class="text-xs text-slate-400 mb-5 max-w-xs leading-relaxed">
+        Advanced Sarcasm &amp; Regional Dialect Analysis is exclusive to the <strong class="text-amber-400">Professional</strong> tier. Unlock deeper linguistic risk intelligence across Indian language nuance.
+      </p>
+      <!-- Feature list -->
+      <ul class="text-left text-xs space-y-2 text-slate-300 mb-6 w-full px-2">
+        <li class="flex items-center gap-2"><span class="text-amber-400 font-bold">✓</span> Sarcasm &amp; irony detection across 14 Indian dialects</li>
+        <li class="flex items-center gap-2"><span class="text-amber-400 font-bold">✓</span> Unlimited Tier-1 cloud engine access</li>
+        <li class="flex items-center gap-2"><span class="text-amber-400 font-bold">✓</span> Full Google AI Studio BYOK integration</li>
+        <li class="flex items-center gap-2"><span class="text-amber-400 font-bold">✓</span> Chrome Extension sidebar support</li>
+      </ul>
+      <!-- CTA -->
+      <button @click="activateProfessional()" class="w-full py-2.5 rounded-xl text-sm font-extrabold tracking-wide transition"
+              style="background: linear-gradient(135deg, #d97706, #f59e0b); color: #1c1917; box-shadow: 0 4px 16px -2px rgba(245,158,11,0.4);">
+        ⚡ Upgrade to Professional — ₹3,999/mo
+      </button>
+      <p class="text-[10px] text-slate-600 mt-3">Simulated checkout · No real payment required in demo mode</p>
+    </div>
+  </div>
+
+  <!-- Google Authentication Modal Overlay (Luxury Dark Glassmorphism) -->
+  <div x-show="authModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex justify-center items-center p-4" x-cloak>
+    <div class="border max-w-md w-full p-8 rounded-2xl shadow-2xl relative bg-slate-950/70 border-slate-800/50 backdrop-blur-xl flex flex-col items-center text-center animate-fade-in" @click.away="authModal = false">
+      <!-- Close button -->
+      <button @click="authModal = false" class="absolute top-4 right-4 text-slate-400 hover:text-white transition text-2xl leading-none" aria-label="Close modal">&times;</button>
+      
+      <!-- Brand Logo Identity -->
+      <div class="w-12 h-12 rounded-full bg-brandBlue/10 border border-brandNeon/30 flex items-center justify-center mb-4 shadow-[0_0_15px_rgba(56,189,248,0.15)]">
+        <div class="w-4 h-4 bg-brandNeon rounded-full shadow-[0_0_8px_#38BDF8]"></div>
+      </div>
+      
+      <h3 class="text-xl font-bold tracking-tight text-white mb-1">Welcome to BrandCheck <span class="text-brandNeon">Pro</span></h3>
+      <p class="text-xs text-slate-400 mb-6 max-w-xs leading-relaxed">
+        Access the zero-data retention pipeline & corporate compliance dashboard.
+      </p>
+      
+      <!-- GIS Button Container with required parameters -->
+      <div class="w-full flex flex-col items-center py-5 bg-slate-900/40 rounded-xl border border-slate-800/40 mb-6">
+        <div id="g_id_onload"
+             data-client_id="1064735319019-9rvf3a587ih09fp5310c3fhnjibe8cp7.apps.googleusercontent.com"
+             data-callback="handleGoogleAuthCallback"
+             data-auto_prompt="false">
+        </div>
+        <div class="g_id_signin"
+             data-type="standard"
+             data-shape="rectangular"
+             data-theme="filled_black"
+             data-text="signin_with"
+             data-size="large"
+             data-logo_alignment="left">
+        </div>
+      </div>
+      
+      <p class="text-[10px] text-slate-500 leading-relaxed max-w-xs">
+        By continuing, you authorize temporary session validation. All campaign auditing is processed ephemerally in memory according to our SLA privacy guidelines.
+      </p>
+    </div>
+  </div>
+
+  <!-- Script Integration loaded in head -->
+
+</body>
+</html>

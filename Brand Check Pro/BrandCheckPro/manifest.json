@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "BrandCheck Pro — Cultural Safety Firewall",
+  "version": "1.0.0",
+  "description": "Scans copywriting workflows for cultural, religious, and political risk anomalies.",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://localhost:8000/*"
+  ],
+  "action": {
+    "default_popup": "frontend/popup.html",
+    "default_icon": {
+      "16": "frontend/icon16.png",
+      "48": "frontend/icon48.png",
+      "128": "frontend/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["frontend/content_script.js"]
+    }
+  ]
+}

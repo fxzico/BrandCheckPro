@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand-group">
+      <span class="logo-dot"></span>
+      <h1>BrandCheck <span class="brand-accent">Pro</span></h1>
+    </div>
+    <span class="badge-status">MVP Engine</span>
+  </header>
+
+  <main class="main-container">
+    <div class="input-wrapper">
+      <label for="copyInput">Campaign Text or Slogan</label>
+      <textarea id="copyInput" placeholder="Type or paste creative text here for pre-crisis validation..."></textarea>
+    </div>
+
+    <div class="control-row">
+      <div class="select-group">
+        <label for="marketSelect">Cultural Geo</label>
+        <select id="marketSelect">
+          <option value="IN-NAT">India (National)</option>
+          <option value="IN-HN">Hindi Belt Matrix</option>
+          <option value="IN-SO">Southern Peninsular</option>
+        </select>
+      </div>
+      <button id="analyzeBtn" class="primary-btn">Stress Test Copy</button>
+    </div>
+
+    <!-- Dynamic Status Loading Component -->
+    <div id="loader" class="loader-component hidden">
+      <div class="spinner"></div>
+      <p>Simulating Public Sentiment Response Matrices...</p>
+    </div>
+
+    <!-- Output Dashboard Panel -->
+    <section id="resultsPanel" class="results-panel hidden">
+      <div class="score-card">
+        <div class="score-radial">
+          <span id="scoreValue">100</span>
+          <span class="score-max">/100</span>
+        </div>
+        <div class="score-meta">
+          <h3>Safety Rating</h3>
+          <p id="riskLabel" class="risk-safe">SAFE</p>
+        </div>
+      </div>
+
+      <div class="summary-box">
+        <h4>Algorithmic Summary</h4>
+        <p id="summaryText">No anomalies detected in the input dataset string context.</p>
+      </div>
+
+      <div class="violations-wrapper">
+        <h4>Contextual Risk Anomalies</h4>
+        <ul id="violationsList" class="violations-list"></ul>
+      </div>
+    </section>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>

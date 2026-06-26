@@ -1,0 +1,188 @@
+/* BrandCheck Pro — Central Stylesheet */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg-main: #0B0F19;
+  --bg-surface: #1E293B;
+  --brand-blue: #2563EB;
+  --brand-cyan: #06B6D4;
+  --brand-neon: #38BDF8;
+  --border-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Base Settings */
+body {
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* ─── Dark Mode Canvas ───────────────────────────────────────── */
+body.dark {
+  background-color: #0B0F19;
+  color: #F1F5F9;
+  background-image: 
+    linear-gradient(rgba(56, 189, 248, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 189, 248, 0.02) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: center top;
+}
+
+/* ─── Light Mode Canvas (Premium Elevation) ──────────────────── */
+body:not(.dark) {
+  background-color: #F8FAFC;
+  color: #1E293B;
+  /* Razor-sharp blueprint grid — ultra-low opacity */
+  background-image: 
+    linear-gradient(rgba(37, 99, 235, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37, 99, 235, 0.025) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: center top;
+}
+
+/* Light-mode panel elevation — elegant white card surfaces */
+body:not(.dark) .glass-card {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(226, 232, 240, 0.8); /* border-slate-200/80 */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04); /* shadow-sm */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Light-mode card hover — lift with neon accent */
+body:not(.dark) .glass-card:hover {
+  border-color: rgba(37, 99, 235, 0.2);
+  box-shadow: 0 4px 16px -4px rgba(37, 99, 235, 0.12), 0 1px 3px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+}
+
+/* Light-mode primary text readability */
+body:not(.dark) .text-slate-100,
+body:not(.dark) .text-slate-200,
+body:not(.dark) .text-slate-300 {
+  color: #1e293b; /* map to text-slate-800 in light */
+}
+
+/* Light-mode action button — vibrant Cyber Blue gradient */
+.btn-primary-gradient {
+  background: linear-gradient(135deg, #2563EB 0%, #0284c7 60%, #38BDF8 100%);
+  color: #fff;
+  font-weight: 700;
+  border: none;
+  transition: opacity 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 14px -2px rgba(37, 99, 235, 0.35);
+}
+
+.btn-primary-gradient:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px -2px rgba(37, 99, 235, 0.45);
+}
+
+.btn-primary-gradient:active {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Outfit', sans-serif;
+}
+
+code, pre {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ─── Glassmorphism Container — Dark Default ─────────────────── */
+.glass-card {
+  background: rgba(30, 41, 59, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-color);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.glass-card:hover {
+  border-color: rgba(56, 189, 248, 0.25);
+  box-shadow: 0 12px 30px -10px rgba(56, 189, 248, 0.15);
+  transform: translateY(-2px);
+}
+
+/* ─── Micro-interaction Animations ──────────────────────────── */
+.interactive-transition {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.focus-ring {
+  transition: box-shadow 0.2s ease;
+}
+
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.4);
+}
+
+/* ─── Shimmer Load States ────────────────────────────────────── */
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+.shimmer-mask {
+  position: relative;
+  overflow: hidden;
+  background-color: rgba(51, 65, 85, 0.3);
+}
+
+.shimmer-mask::after {
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.03) 20%,
+    rgba(255, 255, 255, 0.08) 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shimmer 1.6s infinite;
+  content: '';
+}
+
+/* ─── Collapsible Transitions ────────────────────────────────── */
+.accordion-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
+  opacity: 0;
+}
+
+.accordion-content.open {
+  max-height: 500px;
+  opacity: 1;
+}
+
+/* ─── Premium Tier Feature Gate Badge ───────────────────────── */
+.premium-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+  color: #1c1917;
+  font-size: 9px;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.06em;
+  padding: 1px 7px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+/* ─── Fade-in Animation for Auth Modal ──────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.97) translateY(6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}

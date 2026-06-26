@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The BrandCheck Journal — PR Safety & Linguistic Risk Intel</title>
+  <meta name="description" content="Analytical deep dives exploring how predictive context modeling guards multi-market brand equity and prevents PR crises.">
+  
+  <!-- Premium Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Alpine.js & Tailwind CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Outfit', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brandBg: '#0B0F19',
+            brandSurface: '#1E293B',
+            brandNeon: '#38BDF8',
+            brandBlue: '#2563EB',
+            brandCyan: '#06B6D4',
+            borderDark: '#334155',
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    /* Frosted glass utility classes */
+    .glass-card {
+      background: rgba(30, 41, 59, 0.45);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .glass-card:hover {
+      border-color: rgba(56, 189, 248, 0.3);
+      box-shadow: 0 10px 30px -10px rgba(56, 189, 248, 0.15);
+      transform: translateY(-2px);
+    }
+    
+    /* Shimmer effect for skeleton loading */
+    @keyframes shimmer {
+      100% { transform: translateX(100%); }
+    }
+    .shimmer-bg {
+      position: relative;
+      overflow: hidden;
+      background-color: rgba(51, 65, 85, 0.4);
+    }
+    .shimmer-bg::after {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      transform: translateX(-100%);
+      background-image: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.05) 20%,
+        rgba(255, 255, 255, 0.1) 60%,
+        rgba(255, 255, 255, 0) 100%
+      );
+      animation: shimmer 1.5s infinite;
+      content: '';
+    }
+  </style>
+</head>
+<body class="bg-brandBg text-slate-100 font-sans min-h-screen selection:bg-brandNeon selection:text-slate-900 leading-normal" 
+      x-data="{ 
+        selectedCategory: 'all', 
+        searchQuery: '', 
+        isLoading: false,
+        articles: [
+          {
+            id: 1,
+            title: 'The Anatomy of a Modern Ad Recall: What Copywriters Can Learn',
+            category: 'case-studies',
+            categoryLabel: 'Case Study Matrix',
+            summary: 'Explore the structured computational limits separating clever creative wordplay from highly critical cultural fault line exposure inside localized consumer spaces.',
+            readTime: '5 Min Read',
+            image: 'blog_featured_graphic.png',
+            url: 'post-mortem-01.html',
+            featured: true
+          },
+          {
+            id: 2,
+            title: 'Decoding Regional Double-Entendres in Hindi Metropolitan Ad Campaigns',
+            category: 'linguistic-risk',
+            categoryLabel: 'Linguistic Risk',
+            summary: 'How double-entendres and colloquial phrases in northern Indian metro hubs create unexpected brand friction and PR exposure.',
+            readTime: '4 Min Read',
+            image: null,
+            url: '#',
+            featured: false
+          },
+          {
+            id: 3,
+            title: 'Religious Iconography and Commercial Copy: The Fine Balance',
+            category: 'cultural-safety',
+            categoryLabel: 'Cultural Safety',
+            summary: 'An assessment of campaign failures resulting from mixing sacred mythology with modern product slogans and festive sales narratives.',
+            readTime: '7 Min Read',
+            image: null,
+            url: '#',
+            featured: false
+          },
+          {
+            id: 4,
+            title: 'The Pepsi Sweden Backlash & Mistranslation Mechanics',
+            category: 'cultural-safety',
+            categoryLabel: 'Cultural Safety',
+            summary: 'A post-mortem tracing back to the early linguistic pitfalls of cross-over regional slogans and the vital need for localized review loops.',
+            readTime: '3 Min Read',
+            image: null,
+            url: '#',
+            featured: false
+          }
+        ],
+        filterArticles() {
+          this.isLoading = true;
+          setTimeout(() => { this.isLoading = false; }, 400);
+        },
+        get filteredList() {
+          return this.articles.filter(article => {
+            const matchesCategory = this.selectedCategory === 'all' || article.category === this.selectedCategory;
+            const matchesQuery = article.title.toLowerCase().includes(this.searchQuery.toLowerCase()) || 
+                                 article.summary.toLowerCase().includes(this.searchQuery.toLowerCase());
+            return matchesCategory && matchesQuery;
+          });
+        }
+      }">
+
+  <!-- Main Banner Header -->
+  <header class="border-b border-slate-800 bg-brandSurface/20 backdrop-blur-md sticky top-0 z-40 px-6 py-4">
+    <div class="max-w-6xl mx-auto flex justify-between items-center">
+      <div class="flex items-center gap-3 cursor-pointer" onclick="window.location.href='../index.html'">
+        <div class="w-3 h-3 bg-brandNeon rounded-full shadow-[0_0_10px_#38BDF8]"></div>
+        <span class="font-display text-xl font-bold tracking-tight">BrandCheck <span class="text-brandNeon">Pro</span></span>
+      </div>
+      <div class="flex items-center gap-6 text-sm">
+        <a href="../index.html" class="text-slate-400 hover:text-brandNeon transition font-medium">&larr; Main Portal</a>
+        <span class="text-slate-600">|</span>
+        <span class="text-xs font-mono bg-brandNeon/10 text-brandNeon px-2.5 py-1 rounded border border-brandNeon/20">The BrandCheck Journal</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto py-16 px-6">
+    <!-- Hero Pitch Title -->
+    <div class="mb-12">
+      <span class="text-xs font-mono font-bold tracking-widest text-brandNeon uppercase bg-brandNeon/10 px-3 py-1 rounded-full border border-brandNeon/20">Linguistic Risk Intelligence</span>
+      <h1 class="font-display text-4xl md:text-5xl font-extrabold tracking-tight text-white mt-4 mb-3">
+        Brand Stories & Crisis Post-Mortems
+      </h1>
+      <p class="text-slate-400 text-base max-w-2xl">
+        Data-driven analysis deconstructing real-world corporate PR failures, translation hazards, and linguistic risk matrices.
+      </p>
+    </div>
+
+    <!-- Controls Row: Search & Filters -->
+    <div class="flex flex-col md:flex-row gap-4 justify-between items-center mb-10 pb-6 border-b border-slate-800/60">
+      <!-- Tabs Filters -->
+      <div class="flex flex-wrap gap-2 w-full md:w-auto">
+        <template x-for="cat in [
+          { id: 'all', label: 'All Articles' },
+          { id: 'case-studies', label: 'Case Studies' },
+          { id: 'linguistic-risk', label: 'Linguistic' },
+          { id: 'cultural-safety', label: 'Cultural Safety' }
+        ]">
+          <button @click="selectedCategory = cat.id; filterArticles()"
+                  :class="selectedCategory === cat.id ? 'bg-brandNeon text-slate-950 border-brandNeon' : 'text-slate-300 bg-brandSurface/30 border-slate-800 hover:border-slate-700'"
+                  class="px-4 py-1.5 rounded-full text-xs font-medium border transition duration-200"
+                  x-text="cat.label">
+          </button>
+        </template>
+      </div>
+
+      <!-- Search Input -->
+      <div class="relative w-full md:w-80">
+        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+        </span>
+        <input type="text" 
+               x-model="searchQuery" 
+               placeholder="Search case studies..." 
+               class="w-full bg-brandSurface/20 border border-slate-800 rounded-full py-1.5 pl-9 pr-4 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandNeon/50 focus:ring-1 focus:ring-brandNeon/20 transition">
+      </div>
+    </div>
+
+    <!-- Loading Shimmer State -->
+    <template x-if="isLoading">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="md:col-span-3 glass-card rounded-xl p-6 flex flex-col md:flex-row gap-6">
+          <div class="w-full md:w-2/5 h-48 shimmer-bg rounded-lg"></div>
+          <div class="flex-1 space-y-4 py-2">
+            <div class="h-4 w-1/4 shimmer-bg rounded"></div>
+            <div class="h-8 w-3/4 shimmer-bg rounded"></div>
+            <div class="h-4 w-5/6 shimmer-bg rounded"></div>
+            <div class="h-4 w-2/3 shimmer-bg rounded"></div>
+          </div>
+        </div>
+        <template x-for="i in [1, 2, 3]">
+          <div class="glass-card rounded-xl p-5 space-y-4">
+            <div class="h-4 w-1/3 shimmer-bg rounded"></div>
+            <div class="h-6 w-5/6 shimmer-bg rounded"></div>
+            <div class="h-4 w-full shimmer-bg rounded"></div>
+            <div class="h-4 w-2/3 shimmer-bg rounded"></div>
+          </div>
+        </template>
+      </div>
+    </template>
+
+    <!-- Content Rendering State -->
+    <template x-if="!isLoading">
+      <div>
+        <!-- Zero Results Screen -->
+        <template x-if="filteredList.length === 0">
+          <div class="text-center py-16 bg-brandSurface/10 border border-slate-800 rounded-xl">
+            <svg class="mx-auto h-12 w-12 text-slate-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <h3 class="text-sm font-bold text-slate-300">No Articles Match Your Query</h3>
+            <p class="text-slate-500 text-xs mt-1">Try adapting your filters or search keywords.</p>
+          </div>
+        </template>
+
+        <!-- Main Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          
+          <!-- FEATURED ARTICLE CARD (Full-Width Header) -->
+          <template x-for="article in filteredList.filter(a => a.featured)">
+            <article class="md:col-span-2 lg:col-span-3 glass-card rounded-xl p-6 flex flex-col md:flex-row gap-6 relative overflow-hidden group">
+              <!-- Visual Card Graphic -->
+              <div class="w-full md:w-2/5 h-52 overflow-hidden rounded-lg border border-slate-800 flex-shrink-0 bg-slate-900">
+                <img :src="article.image" 
+                     :alt="article.title"
+                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90 group-hover:opacity-100">
+              </div>
+              <!-- Text details -->
+              <div class="flex-1 flex flex-col justify-between py-1">
+                <div>
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs text-brandNeon font-mono font-bold uppercase tracking-wider" x-text="article.categoryLabel"></span>
+                    <span class="text-slate-500 text-xs font-mono" x-text="article.readTime"></span>
+                  </div>
+                  <h2 class="font-display text-2xl font-bold text-white mb-3 group-hover:text-brandNeon transition duration-200">
+                    <a :href="article.url" x-text="article.title"></a>
+                  </h2>
+                  <p class="text-slate-400 text-xs md:text-sm leading-relaxed mb-4" x-text="article.summary"></p>
+                </div>
+                <div class="mt-auto">
+                  <a :href="article.url" class="inline-flex items-center gap-1.5 text-xs font-semibold text-brandNeon group-hover:underline">
+                    Read Narrative Analysis
+                    <svg class="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            </article>
+          </template>
+
+          <!-- SECONDARY ARTICLES GRID -->
+          <template x-for="article in filteredList.filter(a => !a.featured)">
+            <article class="glass-card rounded-xl p-5 flex flex-col justify-between group">
+              <div>
+                <div class="flex items-center justify-between mb-3">
+                  <span class="text-xs text-brandNeon font-mono font-semibold uppercase tracking-wider" x-text="article.categoryLabel"></span>
+                  <span class="text-slate-500 text-xs font-mono" x-text="article.readTime"></span>
+                </div>
+                <h3 class="font-display text-lg font-bold text-slate-100 mb-2 group-hover:text-brandNeon transition duration-200">
+                  <a :href="article.url" x-text="article.title"></a>
+                </h3>
+                <p class="text-slate-400 text-xs leading-relaxed mb-4" x-text="article.summary"></p>
+              </div>
+              <div class="pt-4 border-t border-slate-800/40">
+                <a :href="article.url" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 group-hover:text-brandNeon transition duration-150">
+                  Analyze Failure Matrix
+                  <svg class="w-3 h-3 transform group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                  </svg>
+                </a>
+              </div>
+            </article>
+          </template>
+
+        </div>
+      </div>
+    </template>
+  </main>
+
+  <footer class="mt-24 border-t border-slate-800 py-10 text-center">
+    <p class="text-xs text-slate-500">
+      &copy; 2026 BrandCheck Pro &bull; Corporate Reputation Safeguards &bull; Built with High Agency
+    </p>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,23 @@
+[
+  {
+    "term": "Bang",
+    "region": "IN-HN",
+    "intended_meaning": "To execute a high-energy campaign or celebrate dynamically.",
+    "risky_interpretation": "Inadvertent contextual association with strict environmental restrictions on loud celebrations or firecrackers in metropolitan regions.",
+    "severity": "Medium"
+  },
+  {
+    "term": "Maid/Servant",
+    "region": "IN-NAT",
+    "intended_meaning": "Domestic operations assistance personnel.",
+    "risky_interpretation": "Linguistic reinforcement of classist social hierarchies if paired with terms emphasizing ultra-cheap labor availability.",
+    "severity": "High"
+  },
+  {
+    "term": "Cleanse",
+    "region": "IN-SO",
+    "intended_meaning": "Product functional efficacy or purifying characteristics.",
+    "risky_interpretation": "Inadvertent intersection with socio-cultural, historically sensitive caste purification tropes.",
+    "severity": "High"
+  }
+]
