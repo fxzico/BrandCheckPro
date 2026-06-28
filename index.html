@@ -7,6 +7,15 @@
   <meta name="description" content="Enterprise Pre-Crisis Linguistic Firewall assessing copywriting against socio-cultural risk anomalies in India.">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <script>
+    window.addEventListener('load', () => {
+      if (window.Alpine) return;
+      const fallback = document.createElement('script');
+      fallback.src = 'https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js';
+      fallback.defer = true;
+      document.head.appendChild(fallback);
+    });
+  </script>
 
   <script>
     // LOCAL HEURISTIC COMPLIANCE ENGINE
@@ -71,41 +80,185 @@
       return { overall_score: finalScore, risk_level: riskLevel, summary, flagged_issues: flagged, engine: 'local' };
     }
 
-    async function runAPIAnalysis(brandContext, demographics, campaignCopy, sensitivity, apiKey) {
-      const combinedText = 'Brand Context: ' + brandContext + '\nTarget Market: ' + demographics + '\nCampaign Copy: ' + campaignCopy;
-      const BACKEND_URL = 'http://127.0.0.1:8000';
-      const marketCodeMap = { 'Whole India Market': 'IN-NAT', 'Tier 1 Market': 'IN-HN', 'Tier 2 Market': 'IN-SO', 'Tier 3 Market and Beyond': 'IN-NAT' };
-      const market = marketCodeMap[demographics] || 'IN-NAT';
-      
-      const headers = { 'Content-Type': 'application/json' };
-      if (apiKey) {
-        headers['Authorization'] = `Bearer ${apiKey}`;
-        headers['X-BrandCheck-Tier'] = 'EnterprisePaid';
+    function normalizeAnalysisPayload(data, engineLabel) {
+      const issues = Array.isArray(data.flagged_issues) ? data.flagged_issues : [];
+      return {
+        overall_score: Number.isFinite(Number(data.overall_score)) ? Math.max(0, Math.min(100, Math.round(Number(data.overall_score)))) : 0,
+        risk_level: data.risk_level || 'API Error',
+        summary: data.summary || 'The analysis engine returned an empty threat evaluation.',
+        flagged_issues: issues.map((issue, index) => ({
+          id: `${engineLabel}-${index}-${issue.phrase || issue.category || 'issue'}`,
+          phrase: issue.phrase || issue.message || 'Contextual anomaly',
+          category: issue.category || 'Contextual Risk',
+          rationale: issue.rationale || issue.message || 'The engine flagged this item for review.'
+        })),
+        engine: engineLabel
+      };
+    }
+
+    function extractJsonPayload(rawText) {
+      const clean = String(rawText || '').replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+      try {
+        return JSON.parse(clean);
+      } catch (_) {
+        const match = clean.match(/\{[\s\S]*\}/);
+        if (!match) throw new Error('The AI response did not contain valid JSON.');
+        return JSON.parse(match[0]);
       }
+    }
+
+    async function readErrorMessage(response) {
+      const text = await response.text();
+      try {
+        return JSON.parse(text).error?.message || text;
+      } catch (_) {
+        return text;
+      }
+    }
+
+    async function resolveGoogleModel(apiKey) {
+      const preferred = [
+        'gemini-2.5-flash',
+        'gemini-2.5-pro',
+        'gemini-2.0-flash',
+        'gemini-2.0-flash-lite',
+        'gemini-1.5-flash',
+        'gemini-1.5-pro'
+      ];
 
       try {
-        const res = await fetch(BACKEND_URL + '/v1/analyze', {
-          method: 'POST',
-          headers: headers,
-          body: JSON.stringify({ text: combinedText, market }),
-          signal: AbortSignal.timeout(15000)
-        });
-        
-        if (!res.ok) {
-           const errData = await res.json().catch(()=>({}));
-           throw new Error(errData.detail || 'Backend server returned ' + res.status);
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`);
+        if (res.ok) {
+          const payload = await res.json();
+          const candidates = (payload.models || [])
+            .filter((model) => (model.supportedGenerationMethods || []).includes('generateContent'))
+            .map((model) => String(model.name || '').replace(/^models\//, ''));
+
+          const preferredHit = preferred.find((name) => candidates.includes(name));
+          if (preferredHit) return preferredHit;
+          if (candidates.length) return candidates[0];
         }
-        
-        const data = await res.json();
-        data.engine = 'api';
-        return data;
       } catch (err) {
-        console.warn('API unavailable or failed:', err.message);
-        if (apiKey) {
-          throw err;
-        }
-        return null;
+        console.warn('Google model discovery failed, using fallback list:', err);
       }
+
+      return preferred[0];
+    }
+
+    async function callGoogleModel(apiKey, model, prompt) {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { responseMimeType: 'application/json', temperature: 0.2 }
+        })
+      });
+      if (!res.ok) {
+        throw new Error(await readErrorMessage(res));
+      }
+      const payload = await res.json();
+      return payload.candidates?.[0]?.content?.parts?.[0]?.text;
+    }
+
+    async function runGoogleAnalysis(apiKey, prompt) {
+      const discoveredModel = await resolveGoogleModel(apiKey);
+      const fallbackModels = [
+        discoveredModel,
+        'gemini-2.5-flash',
+        'gemini-2.5-pro',
+        'gemini-2.0-flash',
+        'gemini-2.0-flash-lite',
+        'gemini-1.5-flash',
+        'gemini-1.5-pro'
+      ].filter((model, index, all) => model && all.indexOf(model) === index);
+
+      const errors = [];
+      for (const model of fallbackModels) {
+        try {
+          const rawText = await callGoogleModel(apiKey, model, prompt);
+          const data = normalizeAnalysisPayload(extractJsonPayload(rawText), `Live AI Pipeline: Google AI Studio (${model})`);
+          return data;
+        } catch (err) {
+          errors.push(`${model}: ${err.message}`);
+          if (!/not found|not supported|permission|quota|api key/i.test(err.message)) break;
+        }
+      }
+
+      throw new Error(`Google AI Studio could not find an available text model for this key. Last error: ${errors.slice(-1)[0] || 'Unknown error'}`);
+    }
+
+    async function callOpenRouterModel(apiKey, model, prompt) {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'HTTP-Referer': window.location.origin,
+          'X-Title': 'BrandCheck Pro'
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: 'Return only strict JSON. No markdown.' },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.2
+        })
+      });
+      if (!res.ok) {
+        throw new Error(await readErrorMessage(res));
+      }
+      const payload = await res.json();
+      return payload.choices?.[0]?.message?.content;
+    }
+
+    async function runOpenRouterAnalysis(apiKey, prompt) {
+      const fallbackModels = [
+        'openrouter/auto',
+        'google/gemini-flash-1.5',
+        'qwen/qwen-2.5-72b-instruct:free',
+        'meta-llama/llama-3.1-8b-instruct:free',
+        'mistralai/mistral-7b-instruct:free'
+      ];
+
+      const errors = [];
+      for (const model of fallbackModels) {
+        try {
+          const rawText = await callOpenRouterModel(apiKey, model, prompt);
+          return normalizeAnalysisPayload(extractJsonPayload(rawText), `Live AI Pipeline: OpenRouter (${model})`);
+        } catch (err) {
+          errors.push(`${model}: ${err.message}`);
+          if (/invalid api key|unauthorized|authentication/i.test(err.message)) break;
+        }
+      }
+
+      throw new Error(`OpenRouter could not route this key to an available model. Last error: ${errors.slice(-1)[0] || 'Unknown error'}`);
+    }
+
+    async function runAPIAnalysis(brandContext, demographics, campaignCopy, sensitivity, apiKey) {
+      const prompt = `You are BrandCheck Pro, an enterprise linguistic compliance sandbox for Indian markets.
+Analyze the campaign with strict socio-cultural, religious, political, caste, gender, class, profanity, and regional double-meaning sensitivity.
+Return only valid JSON with this schema:
+{
+  "overall_score": <integer 0-100>,
+  "risk_level": "<Safe | Caution | High Risk | Critical>",
+  "summary": "<board-ready threat evaluation>",
+  "flagged_issues": [
+    { "phrase": "<exact trigger>", "category": "<risk category>", "rationale": "<specific Indian market risk rationale>" }
+  ]
+}
+
+Brand/Product Context: ${brandContext}
+Target Market: ${demographics}
+Risk Sensitivity: ${sensitivity}
+Campaign Copy: ${campaignCopy}`;
+
+      if (apiKey.startsWith('sk-or-')) {
+        return runOpenRouterAnalysis(apiKey, prompt);
+      }
+
+      return runGoogleAnalysis(apiKey, prompt);
     }
   </script>
 </head>
@@ -114,10 +267,12 @@
         darkMode: true, 
         privacyModal: false, 
         connectionModal: false, 
+        connectionToast: false,
         authModal: false, 
         premiumGateModal: false, 
         wizardStep: 1, 
         brandContext: '', 
+        demographics: 'Whole India Market',
         campaignCopy: '', 
         selectedEngine: 'tier1', 
         sensitivity: 'Standard', 
@@ -128,6 +283,7 @@
         loader: false, 
         faqOpen: null, 
         inferenceStatus: 'Inference Core Ready', 
+        engineUsed: 'Local Heuristic Engine',
         sarcasmFilterEnabled: false, 
         results: { overall_score: 100, risk_level: 'Safe', summary: 'System operational.', flagged_issues: [] }, 
         init() {
@@ -138,55 +294,73 @@
           }
         },
         saveKey() {
-          if (this.cloudEngineKey.trim() !== '') {
-            localStorage.setItem('BC_LIVE_CORE_KEY', this.cloudEngineKey);
+          const cleanKey = this.cloudEngineKey.trim();
+          if (cleanKey !== '') {
+            this.cloudEngineKey = cleanKey;
+            localStorage.setItem('BC_LIVE_CORE_KEY', cleanKey);
             this.inferenceStatus = 'Live AI Pipeline Connected';
+            this.engineUsed = cleanKey.startsWith('sk-or-') ? 'Live AI Pipeline: OpenRouter BYOK' : 'Live AI Pipeline: Google AI Studio BYOK';
             this.connectionModal = false;
+            this.connectionToast = true;
+            setTimeout(() => { this.connectionToast = false; }, 2600);
           }
         },
         disconnectKey() {
           localStorage.removeItem('BC_LIVE_CORE_KEY');
           this.cloudEngineKey = '';
           this.inferenceStatus = 'Inference Core Ready';
+          this.engineUsed = 'Local Heuristic Engine';
           this.connectionModal = false;
         },
         tryToggleSarcasm() { this.premiumGateModal = true }, 
         nextStep() { if(!this.brandContext) { this.brandContextWarning = true; return; } this.brandContextWarning = false; this.wizardStep++; }, 
         async runComplianceCheck() { 
+          if (!this.campaignCopy.trim()) {
+            this.results = {
+              overall_score: 0,
+              risk_level: 'API Error',
+              summary: 'Campaign copy is required before running the compliance sandbox.',
+              flagged_issues: []
+            };
+            this.engineUsed = 'Validation Guard';
+            this.showResults = true;
+            return;
+          }
           this.loader = true; 
           this.showResults = false;
-          
-          // Secure timeout simulation that intercepts network errors and loads mock pipeline metrics if CORS blocks fire
-          setTimeout(() => {
-            this.loader = false; 
-            this.showResults = true; 
-            if (this.cloudEngineKey) {
-              this.results = {
-                overall_score: 88,
-                risk_level: 'Caution',
-                summary: 'Analysis executed successfully via local secure key gateway pipe.',
-                flagged_issues: [
-                  { id: 1, message: 'High-friction profanity/offensive marker detected inside the input caption.' }
-                ]
-              };
-            } else {
-              this.results = {
-                overall_score: 100,
-                risk_level: 'Safe',
-                summary: 'Analysis completed using baseline local verification tables.',
-                flagged_issues: []
-              };
-            }
-          }, 1200);
+          this.inferenceStatus = this.cloudEngineKey ? 'Live AI Pipeline Running...' : 'Local Heuristic Engine Running...';
+          try {
+            const apiKey = this.cloudEngineKey.trim();
+            const data = apiKey
+              ? await runAPIAnalysis(this.brandContext, this.demographics, this.campaignCopy, this.sensitivity, apiKey)
+              : normalizeAnalysisPayload(localHeuristicEngine(this.brandContext, this.demographics, this.campaignCopy, this.sensitivity), 'Local Heuristic Engine');
+            this.results = data;
+            this.engineUsed = data.engine || (apiKey ? 'Live AI Pipeline' : 'Local Heuristic Engine');
+            this.inferenceStatus = apiKey ? 'Live AI Pipeline Connected' : 'Inference Core Ready';
+          } catch (err) {
+            console.error('Compliance analysis failed:', err);
+            this.results = {
+              overall_score: 0,
+              risk_level: 'API Error',
+              summary: `Live AI connection failed: ${err.message}. Check the key, provider quota, and browser network access, then run again.`,
+              flagged_issues: []
+            };
+            this.engineUsed = 'Live AI Pipeline Error';
+            this.inferenceStatus = 'Live AI Pipeline Error';
+          } finally {
+            this.loader = false;
+            this.showResults = true;
+          }
         },
         riskColor(level) {
-          if (level === 'Safe') return 'text-emerald-400 border-emerald-500';
+          if ((level || '').includes('Safe')) return 'text-emerald-400 border-emerald-500';
           if (level === 'Caution') return 'text-amber-400 border-amber-500';
           if (level === 'High Risk') return 'text-orange-400 border-orange-500';
+          if (level === 'API Error') return 'text-rose-400 border-rose-500';
           return 'text-rose-400 border-rose-500';
         },
         riskBg(level) {
-          if (level === 'Safe') return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+          if ((level || '').includes('Safe')) return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
           if (level === 'Caution') return 'bg-amber-500/10 text-amber-400 border-amber-500/30';
           if (level === 'High Risk') return 'bg-orange-500/10 text-orange-400 border-orange-500/30';
           return 'bg-rose-500/10 text-rose-400 border-rose-500/30';
@@ -353,12 +527,16 @@
         FLAGGED RISK SIGNALS (<span x-text="results.flagged_issues ? results.flagged_issues.length : 0">0</span>)
       </h3>
       <div class="space-y-3">
-        <template x-for="issue in (results.flagged_issues || [])" :key="issue.id">
+        <template x-for="issue in (results.flagged_issues || [])" :key="issue.id || issue.phrase">
           <div class="flex items-start gap-3 p-3 rounded-lg bg-rose-500/5 border border-rose-500/20 text-xs text-rose-300 leading-relaxed">
             <span class="flex-shrink-0 px-2 py-0.5 rounded font-mono text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30 uppercase">
-              Trigger
+              <span x-text="issue.category || 'Trigger'"></span>
             </span>
-            <span x-text="issue.message"></span>
+            <span>
+              <strong class="text-rose-200" x-text="issue.phrase || 'Contextual anomaly'"></strong>
+              <span class="text-rose-300/80"> — </span>
+              <span x-text="issue.rationale || issue.message || 'Flagged for brand safety review.'"></span>
+            </span>
           </div>
         </template>
       </div>
@@ -400,13 +578,13 @@
         <h3 class="text-sm font-bold text-white uppercase tracking-wider">Cloud Engine Configuration</h3>
         <button @click="connectionModal = false" class="text-slate-400 hover:text-white text-xl leading-none">&times;</button>
       </div>
-      <p class="text-xs text-slate-400 mb-1 leading-relaxed">Configure your <strong class="text-slate-200">Google AI Studio</strong> or <strong class="text-slate-200">OpenRouter</strong> API key to activate live AI-powered analysis.</p>
-      <p class="text-[10px] text-slate-500 mb-4">Without a key, the local heuristic engine runs automatically.</p>
+      <p class="text-xs text-slate-400 mb-1 leading-relaxed">Paste any <strong class="text-slate-200">Google AI Studio</strong> or <strong class="text-slate-200">OpenRouter</strong> API key. BrandCheck Pro auto-detects an available model for that key.</p>
+      <p class="text-[10px] text-slate-500 mb-4">No model selection is required. Without a key, the local heuristic engine runs automatically.</p>
       <div class="space-y-4">
         <div>
           <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1.5">API Key</label>
           <input type="password" x-model="cloudEngineKey"
-            placeholder="Paste your Google AI Studio or OpenRouter key..."
+            placeholder="Paste any Google AI Studio or OpenRouter key..."
             class="w-full p-3 text-xs border rounded-lg bg-slate-900 border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-[#38BDF8]" />
         </div>
         <div class="flex gap-2">
@@ -418,6 +596,202 @@
       </div>
     </div>
   </div>
+
+  <div x-show="connectionToast" x-transition class="fixed right-5 bottom-5 z-50 max-w-sm rounded-xl border border-emerald-500/30 bg-emerald-500/10 backdrop-blur px-4 py-3 shadow-2xl" style="display:none;">
+    <div class="flex items-start gap-3">
+      <span class="mt-1 w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_#34D399] animate-pulse"></span>
+      <div>
+        <p class="text-xs font-mono font-bold text-emerald-300 uppercase">Live AI Pipeline Connected</p>
+        <p class="text-[11px] text-emerald-100/80 mt-0.5">Your key is saved locally and the next compliance check will use the live engine.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        if (window.Alpine) return;
+
+        const state = {
+          wizardStep: 1,
+          brandContext: '',
+          demographics: 'Whole India Market',
+          campaignCopy: '',
+          selectedEngine: 'tier1',
+          sensitivity: 'Standard',
+          cloudEngineKey: localStorage.getItem('BC_LIVE_CORE_KEY') || '',
+          loader: false,
+          showResults: false,
+          inferenceStatus: localStorage.getItem('BC_LIVE_CORE_KEY') ? 'Live AI Pipeline Connected' : 'Inference Core Ready',
+          engineUsed: localStorage.getItem('BC_LIVE_CORE_KEY') ? 'Live AI Pipeline' : 'Local Heuristic Engine',
+          results: { overall_score: 100, risk_level: 'Safe', summary: 'System operational.', flagged_issues: [] }
+        };
+
+        const q = (selector) => document.querySelector(selector);
+        const qa = (selector) => Array.from(document.querySelectorAll(selector));
+        const show = (el, visible, display = '') => { if (el) el.style.display = visible ? display : 'none'; };
+        const byButtonText = (text) => qa('button').find((button) => button.textContent.includes(text));
+        const stepPanels = [
+          q('[x-show="wizardStep === 1"]'),
+          q('[x-show="wizardStep === 2"]'),
+          q('[x-show="wizardStep === 3"]')
+        ];
+        const outputEmpty = q('[x-show="!loader && !showResults"]');
+        const outputLoader = q('[x-show="loader"]');
+        const outputResults = q('[x-show="showResults && !loader"]');
+        const connectionModal = q('[x-show="connectionModal"]');
+        const connectionToast = q('[x-show="connectionToast"]');
+        const liveBadge = q('nav span[x-show="cloudEngineKey !== \'\'"]');
+        const contextInput = q('textarea[x-model="brandContext"]');
+        const copyInput = q('textarea[x-model="campaignCopy"]');
+        const marketSelect = q('select[x-model="demographics"]');
+        const engineSelect = q('select[x-model="selectedEngine"]');
+        const keyInput = q('input[x-model="cloudEngineKey"]');
+        const stepLabel = q('[x-text="`Step ${wizardStep} of 3`"]');
+        const statusLabel = q('[x-text="inferenceStatus"]');
+        const loaderMarket = q('[x-text="\'Analysing: \' + demographics + \' context layer\'"]');
+        const scoreText = q('[x-text="results.overall_score"]');
+        const riskText = q('[x-text="results.risk_level"]');
+        const summaryText = q('[x-text="results.summary"]');
+        const engineText = q('[x-text="\'Engine: \' + engineUsed"]');
+        const issueCount = q('[x-text="results.flagged_issues ? results.flagged_issues.length : 0"]');
+        const issuesWrap = q('.mt-6 .space-y-3');
+        const cleanBlock = q('[x-show="results.flagged_issues && results.flagged_issues.length === 0"]');
+
+        function renderIssues() {
+          if (!issuesWrap) return;
+          issuesWrap.innerHTML = '';
+          state.results.flagged_issues.forEach((issue) => {
+            const row = document.createElement('div');
+            row.className = 'flex items-start gap-3 p-3 rounded-lg bg-rose-500/5 border border-rose-500/20 text-xs text-rose-300 leading-relaxed';
+            row.innerHTML = `<span class="flex-shrink-0 px-2 py-0.5 rounded font-mono text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30 uppercase">${issue.category || 'Trigger'}</span><span><strong class="text-rose-200">${issue.phrase || 'Contextual anomaly'}</strong><span class="text-rose-300/80"> - </span><span>${issue.rationale || 'Flagged for brand safety review.'}</span></span>`;
+            issuesWrap.appendChild(row);
+          });
+        }
+
+        function render() {
+          stepPanels.forEach((panel, index) => show(panel, state.wizardStep === index + 1));
+          show(outputEmpty, !state.loader && !state.showResults, 'flex');
+          show(outputLoader, state.loader, 'flex');
+          show(outputResults, state.showResults && !state.loader);
+          show(liveBadge, state.cloudEngineKey !== '', 'inline-flex');
+          if (stepLabel) stepLabel.textContent = `Step ${state.wizardStep} of 3`;
+          if (statusLabel) statusLabel.textContent = state.inferenceStatus;
+          if (loaderMarket) loaderMarket.textContent = `Analysing: ${state.demographics} context layer`;
+          if (scoreText) scoreText.textContent = state.results.overall_score;
+          if (riskText) riskText.textContent = state.results.risk_level;
+          if (summaryText) summaryText.textContent = state.results.summary;
+          if (engineText) engineText.textContent = `Engine: ${state.engineUsed}`;
+          if (issueCount) issueCount.textContent = state.results.flagged_issues.length;
+          renderIssues();
+          show(cleanBlock, state.showResults && state.results.flagged_issues.length === 0);
+          show(byButtonText('Back'), state.wizardStep > 1);
+          show(byButtonText('Next Step'), state.wizardStep < 3, 'block');
+          show(byButtonText('RUN COMPLIANCE CHECK'), state.wizardStep === 3, 'block');
+        }
+
+        function openConnectionModal() {
+          if (keyInput) keyInput.value = state.cloudEngineKey;
+          show(connectionModal, true, 'flex');
+        }
+
+        function closeConnectionModal() {
+          show(connectionModal, false);
+        }
+
+        function flashConnectionToast() {
+          show(connectionToast, true);
+          setTimeout(() => show(connectionToast, false), 2600);
+        }
+
+        async function runComplianceCheck() {
+          state.loader = true;
+          state.showResults = false;
+          state.inferenceStatus = state.cloudEngineKey ? 'Live AI Pipeline Running...' : 'Local Heuristic Engine Running...';
+          render();
+          try {
+            const data = state.cloudEngineKey
+              ? await runAPIAnalysis(state.brandContext, state.demographics, state.campaignCopy, state.sensitivity, state.cloudEngineKey)
+              : normalizeAnalysisPayload(localHeuristicEngine(state.brandContext, state.demographics, state.campaignCopy, state.sensitivity), 'Local Heuristic Engine');
+            state.results = data;
+            state.engineUsed = data.engine || 'Live AI Pipeline';
+            state.inferenceStatus = state.cloudEngineKey ? 'Live AI Pipeline Connected' : 'Inference Core Ready';
+          } catch (err) {
+            state.results = {
+              overall_score: 0,
+              risk_level: 'API Error',
+              summary: `Live AI connection failed: ${err.message}. Check the key, provider quota, and browser network access, then run again.`,
+              flagged_issues: []
+            };
+            state.engineUsed = 'Live AI Pipeline Error';
+            state.inferenceStatus = 'Live AI Pipeline Error';
+          }
+          state.loader = false;
+          state.showResults = true;
+          render();
+        }
+
+        contextInput?.addEventListener('input', (event) => { state.brandContext = event.target.value; });
+        copyInput?.addEventListener('input', (event) => { state.campaignCopy = event.target.value; });
+        marketSelect?.addEventListener('change', (event) => { state.demographics = event.target.value; });
+        engineSelect?.addEventListener('change', (event) => { state.selectedEngine = event.target.value; });
+        keyInput?.addEventListener('input', (event) => { state.cloudEngineKey = event.target.value; });
+        qa('button[title="Cloud Configuration"]').forEach((button) => button.addEventListener('click', openConnectionModal));
+        byButtonText('Save & Activate')?.addEventListener('click', () => {
+          state.cloudEngineKey = (keyInput?.value || '').trim();
+          if (!state.cloudEngineKey) return;
+          localStorage.setItem('BC_LIVE_CORE_KEY', state.cloudEngineKey);
+          state.inferenceStatus = 'Live AI Pipeline Connected';
+          state.engineUsed = state.cloudEngineKey.startsWith('sk-or-') ? 'Live AI Pipeline: OpenRouter BYOK' : 'Live AI Pipeline: Google AI Studio BYOK';
+          closeConnectionModal();
+          flashConnectionToast();
+          render();
+        });
+        byButtonText('Clear Key')?.addEventListener('click', () => {
+          localStorage.removeItem('BC_LIVE_CORE_KEY');
+          state.cloudEngineKey = '';
+          if (keyInput) keyInput.value = '';
+          state.inferenceStatus = 'Inference Core Ready';
+          state.engineUsed = 'Local Heuristic Engine';
+          closeConnectionModal();
+          render();
+        });
+        byButtonText('Next Step')?.addEventListener('click', () => {
+          if (state.wizardStep === 1 && !state.brandContext.trim()) return;
+          state.wizardStep = Math.min(3, state.wizardStep + 1);
+          render();
+        });
+        byButtonText('Back')?.addEventListener('click', () => {
+          state.wizardStep = Math.max(1, state.wizardStep - 1);
+          render();
+        });
+        byButtonText('RUN COMPLIANCE CHECK')?.addEventListener('click', runComplianceCheck);
+        byButtonText('Re-run Check')?.addEventListener('click', runComplianceCheck);
+        byButtonText('New Analysis')?.addEventListener('click', () => {
+          state.showResults = false;
+          state.wizardStep = 1;
+          state.inferenceStatus = state.cloudEngineKey ? 'Live AI Pipeline Connected' : 'Inference Core Ready';
+          render();
+        });
+        byButtonText('Load Demo Risk Payload')?.addEventListener('click', () => {
+          state.brandContext = 'Holiday promotional advertisement campaigns for family-owned stores during the festive season';
+          state.demographics = 'Tier 1 Market';
+          state.campaignCopy = 'Our sacred festive sale brings you cheap deals on modern home assets! Bang-for-your-buck value guaranteed.';
+          state.sensitivity = 'Standard';
+          state.wizardStep = 3;
+          if (contextInput) contextInput.value = state.brandContext;
+          if (copyInput) copyInput.value = state.campaignCopy;
+          if (marketSelect) marketSelect.value = state.demographics;
+          runComplianceCheck();
+        });
+        qa('button').filter((button) => button.textContent.trim() === 'x' || button.textContent.trim() === '×').forEach((button) => {
+          button.addEventListener('click', closeConnectionModal);
+        });
+
+        render();
+      }, 1000);
+    });
+  </script>
 
 </body>
 </html>
