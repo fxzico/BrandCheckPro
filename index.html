@@ -406,21 +406,45 @@ Campaign Copy: ${campaignCopy}`;
         selectedEngine: 'tier1', 
         sensitivity: 'Standard', 
         brandContextWarning: false, 
-        user: null, 
-        cloudEngineKey: '', 
-        showResults: false, 
-        loader: false, 
-        faqOpen: null, 
-        inferenceStatus: 'Inference Core Ready', 
+        user: null,
+        userDropdown: false,
+        cloudEngineKey: '',
+        showResults: false,
+        loader: false,
+        faqOpen: null,
+        inferenceStatus: 'Inference Core Ready',
         engineUsed: 'Local Heuristic Engine',
-        sarcasmFilterEnabled: false, 
-        results: { overall_score: 100, risk_level: 'Safe', summary: 'System operational.', flagged_issues: [] }, 
+        sarcasmFilterEnabled: false,
+        results: { overall_score: 100, risk_level: 'Safe', summary: 'System operational.', flagged_issues: [] },
         init() {
           // Auto-load existing key on page load to light up the UI immediately
           this.cloudEngineKey = localStorage.getItem('BC_LIVE_CORE_KEY') || '';
           if (this.cloudEngineKey) {
             this.inferenceStatus = 'Live AI Pipeline Connected';
             this.engineUsed = providerLabel(this.cloudEngineKey);
+          }
+          // Check for existing auth user
+          const existingUser = typeof getAuthUser === 'function' ? getAuthUser() : null;
+          if (existingUser) {
+            this.user = existingUser;
+          }
+          // Listen for auth events
+          window.addEventListener('gauth:login', (e) => {
+            this.user = e.detail;
+            this.authModal = false;
+          });
+          window.addEventListener('gauth:logout', () => {
+            this.user = null;
+            this.userDropdown = false;
+          });
+        },
+        signOut() {
+          if (typeof signOutUser === 'function') {
+            signOutUser();
+          } else {
+            this.user = null;
+            this.userDropdown = false;
+            window.dispatchEvent(new CustomEvent('gauth:logout'));
           }
         },
         saveKey() {
@@ -562,7 +586,32 @@ Campaign Copy: ${campaignCopy}`;
           <span x-show="darkMode" class="text-amber-400">☀️</span>
           <span x-show="!darkMode" class="text-slate-600">🌙</span>
         </button>
-        <button @click="authModal = true" class="border font-semibold px-4 py-2 rounded-md text-xs transition duration-150" :class="darkMode ? 'border-slate-700 bg-slate-900/40 text-slate-200 hover:bg-slate-800 hover:text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'">Sign In</button>
+
+        <!-- Signed-Out State -->
+        <div x-show="!user">
+          <button @click="authModal = true" class="border font-semibold px-4 py-2 rounded-md text-xs transition duration-150" :class="darkMode ? 'border-slate-700 bg-slate-900/40 text-slate-200 hover:bg-slate-800 hover:text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'">Sign In</button>
+        </div>
+
+        <!-- Signed-In State -->
+        <div x-show="user" class="relative" @click.away="userDropdown = false" x-cloak>
+          <button @click="userDropdown = !userDropdown" class="flex items-center gap-2 px-2.5 py-1 rounded-full border transition" :class="darkMode ? 'border-slate-700 bg-slate-900 hover:bg-slate-800' : 'border-slate-300 bg-white hover:bg-slate-100'">
+            <img :src="user ? user.picture : ''" alt="User Avatar" class="w-5 h-5 rounded-full border border-brandNeon" referrerpolicy="no-referrer" style="width:20px; height:20px;">
+            <span class="text-xs font-semibold" :class="darkMode ? 'text-slate-200' : 'text-slate-700'" x-text="user ? user.given_name : ''"></span>
+            <span class="text-[9px] text-slate-400">▼</span>
+          </button>
+          
+          <!-- Dropdown Card -->
+          <div x-show="userDropdown" x-transition class="absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 border z-50" :class="darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'">
+            <div class="px-4 py-2 border-b" :class="darkMode ? 'border-slate-700' : 'border-slate-200'">
+              <p class="text-xs font-bold truncate" :class="darkMode ? 'text-slate-200' : 'text-slate-800'" x-text="user ? user.name : ''"></p>
+              <p class="text-[10px] text-slate-500 truncate" x-text="user ? user.email : ''"></p>
+            </div>
+            <button @click="signOut()" class="w-full text-left px-4 py-2 text-xs text-red-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition font-semibold">
+              Sign Out
+            </button>
+          </div>
+        </div>
+
         <a href="pricing.html" class="bg-brandBlue hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-md text-xs transition duration-150 shadow-md">Enterprise Access</a>
       </div>
     </div>
