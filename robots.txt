@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+Allow: /blog/
+Allow: /index.html
+Allow: /blog.html
+Allow: /pricing.html
+Allow: /api-connector.html
+Allow: /origin.html
+
+# SEO-optimized case studies (primary)
+Allow: /blog/tanishq-ekatvam-interfaith-ad-campaign-failure-case-study.html
+Allow: /blog/zomato-kachra-recycling-campaign-backlash-analysis.html
+Allow: /blog/fabindia-jashn-e-riwaaz-cultural-controversy-breakdown.html
+Allow: /blog/manyavar-kanyamaan-ritual-subversion-case-study.html
+Allow: /blog/layers-shot-ad-ban-indecent-advertising-case-study.html
+
+Sitemap: https://brandcheckpro.in/sitemap.xml
+
+# Crawl-delay for heavy bots
+Crawl-delay: 1
