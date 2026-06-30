@@ -56,18 +56,13 @@
     authModal: false,
     userDropdown: false,
     init() {
-      // Check if user session already exists on mount (simulating useEffect [])
       const existingUser = typeof getAuthUser === 'function' ? getAuthUser() : null;
-      if (existingUser && window.location.pathname !== '/dashboard') {
-        // Auto-Redirect on Mount: Bypassing the landing screen and bouncing to active dashboard
-        window.location.href = '/dashboard';
+      if (existingUser) {
+        this.user = existingUser;
       }
-      
-      // Auth State Listener for mid-session updates
       window.addEventListener('gauth:login', (e) => {
-        if (window.location.pathname !== '/dashboard') {
-          window.location.href = '/dashboard';
-        }
+        this.user = e.detail;
+        this.authModal = false;
       });
       window.addEventListener('gauth:logout', () => {
         this.user = null;

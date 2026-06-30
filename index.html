@@ -1068,25 +1068,6 @@ Campaign Copy: ${campaignCopy}`;
         render();
       }, 1000);
     });
-
-    // Auth State Listener (useEffect equivalent)
-    const checkAuthAndRedirect = () => {
-      const existingUser = typeof getAuthUser === 'function' ? getAuthUser() : null;
-      if (existingUser && window.location.pathname !== '/dashboard') {
-        // Auto-Redirect on Mount: bypass landing screen
-        window.location.href = '/dashboard';
-      }
-    };
-    
-    // Check on mount
-    checkAuthAndRedirect();
-
-    // Listen for mid-session updates from Google Identity Services
-    window.addEventListener('gauth:login', () => {
-      if (window.location.pathname !== '/dashboard') {
-        window.location.href = '/dashboard';
-      }
-    });
   </script>
 
 </body>
