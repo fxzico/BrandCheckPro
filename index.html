@@ -566,8 +566,8 @@ Campaign Copy: ${campaignCopy}`;
        :class="darkMode ? 'border-slate-800 bg-brandBgDark/85 backdrop-blur-md' : 'border-slate-200 bg-brandBgLight/85 backdrop-blur-md'">
     <div class="max-w-6xl mx-auto flex justify-between items-center">
       <div class="flex items-center gap-3 cursor-pointer" onclick="window.location.reload()">
-        <div class="w-3 h-3 bg-brandNeon rounded-full shadow-[0_0_10px_#38BDF8]"></div>
-        <span class="text-xl font-bold tracking-tight">BrandCheck <span class="text-brandNeon">Pro</span></span>
+        <img src="assets/images/logo-light-mode.svg" alt="BrandCheck Pro Logo" class="block dark:hidden h-8 w-auto" />
+        <img src="assets/images/logo-dark-mode.svg" alt="BrandCheck Pro Logo" class="hidden dark:block h-8 w-auto" />
       </div>
       <div class="hidden md:flex items-center gap-8 text-sm font-medium">
         <a href="index.html" class="text-brandNeon font-semibold transition">Dashboard</a>
@@ -810,8 +810,9 @@ Campaign Copy: ${campaignCopy}`;
     <div class="border max-w-sm w-full p-8 rounded-xl shadow-2xl relative text-center transition-colors duration-200"
          :class="darkMode ? 'bg-brandSurfaceDark border-slate-700' : 'bg-white border-slate-200'">
       <button @click="authModal = false" class="absolute top-4 right-4 hover:text-white text-xl leading-none" :class="darkMode ? 'text-slate-400' : 'text-slate-500'">&times;</button>
-      <div class="w-10 h-10 rounded-full border flex items-center justify-center mx-auto mb-4" :class="darkMode ? 'bg-brandNeon/10 border-brandNeon/30' : 'bg-brandBlue/10 border-brandBlue/30'">
-        <div class="w-3 h-3 rounded-full shadow-[0_0_8px_#38BDF8]" :class="darkMode ? 'bg-brandNeon' : 'bg-brandBlue'"></div>
+      <div class="mb-4">
+        <img src="assets/images/logo-light-mode.svg" alt="BrandCheck Pro Logo" class="h-10 w-auto" :class="darkMode ? 'hidden' : 'block'" />
+        <img src="assets/images/logo-dark-mode.svg" alt="BrandCheck Pro Logo" class="h-10 w-auto" :class="darkMode ? 'block' : 'hidden'" />
       </div>
       <h3 class="text-lg font-bold mb-2" :class="darkMode ? 'text-white' : 'text-slate-900'">Welcome to BrandCheck <span class="text-brandNeon">Pro</span></h3>
       <p class="text-xs mb-6" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Access the zero-data retention pipeline and corporate compliance dashboard.</p>
