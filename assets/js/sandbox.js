@@ -29,7 +29,7 @@
 //   Production:        "https://api.brandcheckpro.in"  (or wherever you host it)
 // Leave as "" if the frontend is served from the same origin as the backend.
 // ═══════════════════════════════════════════════════════════════════════════════
-const BACKEND_URL = "";
+const BACKEND_URL = "http://localhost:8000";  // Set to your backend URL
 
 // OpenRouter model used for the default pool and user-supplied OR keys.
 const OR_MODEL = "qwen/qwen-2.5-72b-instruct:free";
@@ -46,6 +46,132 @@ const ANTHROPIC_MODEL = "claude-3-5-haiku-20241022";
 const ENGINE_CONFIG = {
   api_endpoint: null, // Set to a URL to enable a custom self-hosted inference gateway
 };
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GLOBAL UTILITY FUNCTIONS (shared across all pages)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Normalizes analysis payload to ensure consistent structure
+ * @param {object} data - Raw analysis data
+ * @param {string} engineLabel - Label for the engine used
+ * @returns {object} Normalized analysis result
+ */
+function normalizeAnalysisPayload(data, engineLabel) {
+  const issues = Array.isArray(data.flagged_issues) ? data.flagged_issues : [];
+  return {
+    overall_score: Number.isFinite(Number(data.overall_score)) ? Math.max(0, Math.min(100, Math.round(Number(data.overall_score)))) : 0,
+    risk_level: data.risk_level || 'API Error',
+    summary: data.summary || 'The analysis engine returned an empty threat evaluation.',
+    flagged_issues: issues.map((issue, index) => ({
+      id: `${engineLabel}-${index}-${issue.phrase || issue.category || 'issue'}`,
+      phrase: issue.phrase || issue.message || 'Contextual anomaly',
+      category: issue.category || 'Contextual Risk',
+      rationale: issue.rationale || issue.message || 'The engine flagged this item for review.'
+    })),
+    engine: engineLabel
+  };
+}
+
+/**
+ * Extracts JSON payload from raw text response (handles markdown fences)
+ * @param {string} rawText - Raw text containing JSON
+ * @returns {object} Parsed JSON object
+ */
+function extractJsonPayload(rawText) {
+  const clean = String(rawText || '').replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+  try {
+    return JSON.parse(clean);
+  } catch (_) {
+    const match = clean.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('The AI response did not contain valid JSON.');
+    return JSON.parse(match[0]);
+  }
+}
+
+/**
+ * Reads error message from API response
+ * @param {Response} response - Fetch response object
+ * @returns {Promise<string>} Error message
+ */
+async function readErrorMessage(response) {
+  const text = await response.text();
+  try {
+    return JSON.parse(text).error?.message || text;
+  } catch (_) {
+    return text;
+  }
+}
+
+/**
+ * LOCAL HEURISTIC COMPLIANCE ENGINE
+ * Fallback engine when no API key is available or backend is unreachable
+ * @param {string} brandContext - Brand/product context
+ * @param {string} demographics - Target demographics
+ * @param {string} campaignCopy - Campaign copy to analyze
+ * @param {string} sensitivity - Sensitivity level (Low, Standard, Maximum)
+ * @returns {object} Analysis result
+ */
+function localHeuristicEngine(brandContext, demographics, campaignCopy, sensitivity = 'Standard') {
+  const text = (brandContext + ' ' + campaignCopy).toLowerCase();
+  const flagged = [];
+  let deductions = 0;
+  const sensitivityMultiplier = sensitivity === 'Maximum' ? 1.4 : sensitivity === 'Low' ? 0.6 : 1.0;
+
+  const rules = [
+    { kw: 'sacred', cat: 'Religious Sensitivity', reason: 'Mixing sacred/religious terminology with commercial messaging risks backlash from devout demographics.', score: 18 },
+    { kw: 'divine', cat: 'Religious Sensitivity', reason: 'Using divine imagery for commercial gain can offend religious sentiments across multiple faiths in India.', score: 15 },
+    { kw: 'blessing', cat: 'Religious Sensitivity', reason: 'Commodifying spiritual concepts may alienate conservative religious consumer bases.', score: 12 },
+    { kw: 'holy', cat: 'Religious Sensitivity', reason: 'Juxtaposing holy/religious framing with commercial offers invites PR risk.', score: 18 },
+    { kw: 'temple', cat: 'Religious Sensitivity', reason: 'References to religious sites in commercial copy risk offending devotees.', score: 14 },
+    { kw: 'mandir', cat: 'Religious Sensitivity', reason: 'Direct temple references in marketing collateral carry significant religious sensitivity risk in Indian markets.', score: 20 },
+    { kw: 'jihad', cat: 'Religious Sensitivity', reason: 'Highly charged religious/political term with extreme polarisation potential.', score: 40 },
+    { kw: 'kafir', cat: 'Religious Sensitivity', reason: 'Religiously derogatory slur — severe PR and legal exposure.', score: 50 },
+    { kw: 'nationalist', cat: 'Political Neutrality', reason: 'Brand alignment with political ideology risks alienating opposing political segments.', score: 22 },
+    { kw: 'freedom', cat: 'Political Neutrality', reason: '"Freedom" used in commercial contexts can carry political dog-whistle connotations in polarised India.', score: 10 },
+    { kw: 'revolution', cat: 'Political Neutrality', reason: 'Revolutionary language can be read as politically provocative by conservative audiences.', score: 14 },
+    { kw: 'protest', cat: 'Political Neutrality', reason: 'Associating a brand with protest imagery carries political risk in India\'s regulatory environment.', score: 18 },
+    { kw: 'cheap', cat: 'Gender & Social Tone', reason: '"Cheap" combined with demographic framing can carry classist or exploitative brand connotations.', score: 15 },
+    { kw: 'maid', cat: 'Gender & Social Tone', reason: 'Referencing domestic help roles in promotional contexts can reinforce classist social hierarchies.', score: 20 },
+    { kw: 'housewife', cat: 'Gender & Social Tone', reason: 'Stereotyping gender roles in marketing is a known risk trigger for modern urban demographics.', score: 18 },
+    { kw: 'fair skin', cat: 'Gender & Social Tone', reason: 'Colorist language is a documented PR crisis vector in India.', score: 35 },
+    { kw: 'fairness', cat: 'Gender & Social Tone', reason: 'Skin-tone-linked fairness claims carry legal and reputational risk post-2020 ASCI guidelines.', score: 28 },
+    { kw: 'whitening', cat: 'Gender & Social Tone', reason: 'Explicit skin-whitening claims are banned under ASCI/DTCP regulatory framework.', score: 40 },
+    { kw: 'bang', cat: 'Sarcasm & Double Meaning', reason: '"Bang" has regional double-entendre connotations that can be contextually misread.', score: 15 },
+    { kw: 'naked', cat: 'Sarcasm & Double Meaning', reason: 'Sexually suggestive language risks content restriction or public complaints.', score: 25 },
+    { kw: 'hard', cat: 'Sarcasm & Double Meaning', reason: '"Hard" without clear context can carry unintended sexual double-meaning in Hindi-influenced semantics.', score: 10 },
+    { kw: 'lower caste', cat: 'Caste & Community Risk', reason: 'Direct caste-referencing in commercial messaging is legally sensitive under SC/ST Act provisions.', score: 50 },
+    { kw: 'dalit', cat: 'Caste & Community Risk', reason: 'Using community identity terms commercially without authority or context is exploitative and legally risky.', score: 45 },
+    { kw: 'brahmin', cat: 'Caste & Community Risk', reason: 'Caste identity references in brand messaging polarise audiences and attract regulatory attention.', score: 40 },
+    { kw: 'fuck', cat: 'Profanity & Offensive Language', reason: 'Explicit profanity is completely unacceptable in commercial copy and guarantees severe PR damage.', score: 80 },
+    { kw: 'shit', cat: 'Profanity & Offensive Language', reason: 'Profane language damages brand safety and violates advertising standards.', score: 50 },
+    { kw: 'bitch', cat: 'Profanity & Offensive Language', reason: 'Derogatory slurs violate social tone policies and brand safety guidelines.', score: 70 },
+    { kw: 'asshole', cat: 'Profanity & Offensive Language', reason: 'Offensive insults are strictly prohibited in public campaign copy.', score: 60 },
+    { kw: 'cunt', cat: 'Profanity & Offensive Language', reason: 'Extreme profanity will result in immediate platform bans and severe backlash.', score: 90 },
+    { kw: 'bastard', cat: 'Profanity & Offensive Language', reason: 'Offensive insults are strictly prohibited in public campaign copy.', score: 60 },
+  ];
+
+  for (const rule of rules) {
+    if (text.includes(rule.kw)) {
+      flagged.push({ phrase: rule.kw, category: rule.cat, rationale: rule.reason });
+      deductions += Math.round(rule.score * sensitivityMultiplier);
+    }
+  }
+
+  const finalScore = Math.max(100 - deductions, 10);
+  const riskLevel = finalScore >= 85 ? 'Safe' : finalScore >= 65 ? 'Caution' : finalScore >= 40 ? 'High Risk' : 'Critical';
+  let summary = '';
+  if (finalScore >= 85) {
+    summary = 'The campaign copy and brand context pass baseline socio-cultural risk screening. No critical violations detected. Monitor for edge-case regional sensitivities before launch.';
+  } else if (finalScore >= 65) {
+    summary = flagged.length + ' caution-level risk signal(s) detected. The flagged phrases may cause misinterpretation across specific Indian demographics. Refine highlighted elements before going live.';
+  } else if (finalScore >= 40) {
+    summary = flagged.length + ' high-risk linguistic pattern(s) identified. The copy contains phrases with documented PR crisis potential in the Indian market. Immediate revision is strongly advised.';
+  } else {
+    summary = flagged.length + ' critical violation(s) detected. This copy contains language that poses severe legal, religious, or social harm risk in the Indian cultural context. Do NOT publish without complete revision and legal review.';
+  }
+  return { overall_score: finalScore, risk_level: riskLevel, summary, flagged_issues: flagged, engine: 'local' };
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // KEY / PROVIDER DETECTION HELPERS
