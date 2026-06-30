@@ -1,23 +1,106 @@
 /**
  * BrandCheck Pro — Volatile RAM Sandbox Simulation Engine
  * Routing Architecture (2026):
- *   No key saved  → Embedded free OpenRouter proxy  (qwen/qwen-2.5-72b-instruct:free)
- *   sk-or-* key   → User's own OpenRouter account   (qwen/qwen-2.5-72b-instruct:free)
- *   AIza* key     → User's Google AI Studio BYOK    (gemini-3.5-flash)
+ *   BYOK key (any provider) → User's own API account
+ *   Signed-in user         → Operator-paid default API key on every run
+ *   Anonymous 1st use      → Complimentary default API key (one time)
+ *   No key / 2nd+ anon     → Offline heuristic engine
+ *
+ * Supported BYOK key prefixes (auto-detected):
+ *   sk-or-*              → OpenRouter
+ *   AIza*                → Google AI Studio (Gemini)
+ *   sk-* / sk-proj-*     → OpenAI
+ *   sk-ant-*             → Anthropic
+ *   anything else        → OpenRouter-compatible fallback
+ *
+ * Default key location:
+ *   Set DEFAULT_API_KEY below. It is the operator-paid key used for every
+ *   signed-in user and for the first free run of anonymous visitors.
  */
 
-// Zero-config free-pool proxy key — powers baseline analysis out of the box.
-const DEFAULT_OR_KEY = "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";
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONFIGURABLE DEFAULT API KEY
+// Paste the operator-paid API key below. It will be used:
+//   • For every signed-in user on every run (unlimited operator-paid API calls)
+//   • For the very first run of an anonymous visitor (one complimentary call)
+// The key can be from ANY provider (OpenRouter, Google AI Studio, OpenAI,
+// Anthropic, or any OpenRouter-compatible service). The sandbox auto-detects
+// the provider from the key prefix.
+// Users can override this at any time by pasting their own key in the
+// Cloud Engine modal (⚙️ icon).
+// ═══════════════════════════════════════════════════════════════════════════════
+const DEFAULT_API_KEY = "«redacted:sk-…»";
 
-// OpenRouter model used for both the free proxy AND user-supplied OR keys.
+// OpenRouter model used for the default pool and user-supplied OR keys.
 const OR_MODEL = "qwen/qwen-2.5-72b-instruct:free";
 
-// Active 2026 Google AI Studio production model (used for BYOK AIza keys).
-const GEMINI_MODEL = "gemini-3.5-flash";
+// Active Google AI Studio production model (used for BYOK AIza keys).
+const GEMINI_MODEL = "gemini-2.0-flash";
+
+// OpenAI model used for BYOK OpenAI keys.
+const OPENAI_MODEL = "gpt-4o-mini";
+
+// Anthropic model used for BYOK Anthropic keys.
+const ANTHROPIC_MODEL = "claude-3-5-haiku-20241022";
 
 const ENGINE_CONFIG = {
   api_endpoint: null, // Set to a URL to enable a custom self-hosted inference gateway
 };
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// KEY / PROVIDER DETECTION HELPERS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Detects the provider family for a given API key.
+ * Returns one of: 'openrouter' | 'google' | 'openai' | 'anthropic' | 'unknown'
+ */
+function detectProvider(apiKey) {
+  if (!apiKey || typeof apiKey !== 'string') return 'unknown';
+  const key = apiKey.trim();
+  if (key.startsWith('sk-or-')) return 'openrouter';
+  if (key.startsWith('AIza')) return 'google';
+  if (key.startsWith('sk-ant-')) return 'anthropic';
+  if (key.startsWith('sk-proj-') || key.startsWith('sk-') || key.startsWith('sk_live_') || key.startsWith('sk_test_')) return 'openai';
+  return 'unknown';
+}
+
+/**
+ * Returns a user-friendly label for the detected provider.
+ */
+function providerLabel(apiKey) {
+  const map = {
+    openrouter: 'OpenRouter BYOK',
+    google: 'Google AI Studio BYOK',
+    openai: 'OpenAI BYOK',
+    anthropic: 'Anthropic BYOK',
+    unknown: 'Custom BYOK'
+  };
+  return map[detectProvider(apiKey)] || 'Live AI Pipeline';
+}
+
+/**
+ * Checks whether this browser has already consumed its complimentary first-use
+ * default-API analysis. In production this should be validated against a backend
+ * that tracks first-use-per-IP.
+ */
+function isFirstUseDefaultConsumed() {
+  return localStorage.getItem('BC_FIRST_USE_DEFAULT_CONSUMED') === '1';
+}
+
+/**
+ * Marks the complimentary first-use default-API analysis as consumed.
+ */
+function markFirstUseDefaultConsumed() {
+  localStorage.setItem('BC_FIRST_USE_DEFAULT_CONSUMED', '1');
+}
+
+/**
+ * Resets the first-use flag (useful for testing or when a user clears keys).
+ */
+function resetFirstUseDefault() {
+  localStorage.removeItem('BC_FIRST_USE_DEFAULT_CONSUMED');
+}
 
 /**
  * Post-processes analysis output to intercept and penalize severe profanity
@@ -204,19 +287,43 @@ async function executeComplianceCheck(brandContext, demographics, campaignCopy) 
   console.log(`[BrandCheck Pro] Context: ${brandContext} | Demographics: ${demographics}`);
   console.log(`[BrandCheck Pro] Target Copy: "${campaignCopy}"`);
 
-  // ── Key Resolution ───────────────────────────────────────────────────────────
-  // Priority: BYOK stored key  >  Embedded free OpenRouter proxy (zero-config)
-  const storedKey =
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // KEY RESOLUTION — BYOK > Signed-in paid API > First-use default API > offline heuristic
+  // ═══════════════════════════════════════════════════════════════════════════════
+  const byokKey =
     localStorage.getItem('BC_LIVE_CORE_KEY') ||
     localStorage.getItem('BC_PRO_LIVE_KEY') ||
     localStorage.getItem('BC_PRO_API_KEY') ||
     sessionStorage.getItem('BC_LIVE_CORE_KEY') ||
     sessionStorage.getItem('BC_PRO_LIVE_KEY') ||
-    sessionStorage.getItem('BC_PRO_API_KEY');
+    sessionStorage.getItem('BC_PRO_API_KEY') ||
+    '';
 
-  // Determine route: BYOK Google key → Gemini 3.5 Flash | everything else → OpenRouter pool
-  const isGeminiKey = storedKey && !storedKey.startsWith('sk-or-');
-  const orKey = storedKey?.startsWith('sk-or-') ? storedKey : DEFAULT_OR_KEY; // user OR key or free proxy
+  const signedInUser = (typeof getAuthUser === 'function') ? getAuthUser() : null;
+  const isSignedIn = !!signedInUser;
+
+  // Paid API eligibility:
+  // 1. BYOK always wins and overrides everything.
+  // 2. Signed-in users get the operator-paid default API key on every run.
+  // 3. Anonymous users get the default API key only for their first use (per browser).
+  // 4. Everyone else falls back to the offline heuristic engine.
+  let usedDefaultKey = false;
+  let activeKey = byokKey;
+  if (!byokKey && DEFAULT_API_KEY && !DEFAULT_API_KEY.includes('«redacted')) {
+    if (isSignedIn) {
+      activeKey = DEFAULT_API_KEY;
+      usedDefaultKey = true; // operator-paid key for authenticated users
+      console.log('[BrandCheck Pro] Signed-in user — operator-paid default API key applied.');
+    } else if (!isFirstUseDefaultConsumed()) {
+      activeKey = DEFAULT_API_KEY;
+      usedDefaultKey = true;
+      markFirstUseDefaultConsumed();
+      console.log('[BrandCheck Pro] First-use default API key applied for anonymous visitor.');
+    }
+  }
+
+  const provider = detectProvider(activeKey);
+  console.log(`[BrandCheck Pro] Provider detected: ${provider}${usedDefaultKey ? ' (default)' : ' (BYOK)'}`);
 
   // ── Shared system prompt ─────────────────────────────────────────────────────
   const systemPrompt = `You are an expert brand safety evaluation engine. Analyze the given campaign copy under the provided brand context and target demographics.
@@ -236,9 +343,11 @@ Return ONLY a valid JSON object — no markdown fences, no commentary — with t
   ]
 }`;
 
-  // ── Route A: BYOK Google AI Studio key → Gemini 3.5 Flash ───────────────────
-  if (isGeminiKey) {
-    console.log(`[BrandCheck Pro] BYOK Google AI Studio key detected. Routing → ${GEMINI_MODEL}...`);
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Route A: Google AI Studio BYOK (AIza...)
+  // ═══════════════════════════════════════════════════════════════════════════════
+  if (provider === 'google') {
+    console.log(`[BrandCheck Pro] Google AI Studio ${usedDefaultKey ? 'default' : 'BYOK'} key detected. Routing → ${GEMINI_MODEL}...`);
     try {
       const promptText = `${systemPrompt}
 
@@ -250,7 +359,7 @@ Input Payload Matrix:
 Output MUST strictly be a single valid JSON object with no markdown wrappers:`;
 
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${storedKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${activeKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -298,10 +407,11 @@ Output MUST strictly be a single valid JSON object with no markdown wrappers:`;
     }
   }
 
-  // ── Route B: OpenRouter (free proxy OR user's own sk-or- key) ────────────────
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Route B: OpenRouter (default pool OR user's own sk-or- key OR unknown key)
+  // ═══════════════════════════════════════════════════════════════════════════════
   // Watertight 4-layer error trap — nothing technical leaks to the UI.
-  {
-    // Blocked UI leak terms — these must NEVER appear in consumer-facing output.
+  if (provider === 'openrouter' || provider === 'unknown') {
     const UI_BLOCKED_STRINGS = [/qwen/i, /deepseek/i, /openrouter/i, /api version/i, /model.*not.*found/i, /provider/i];
     const sanitizeForUI = (str) => UI_BLOCKED_STRINGS.some(rx => rx.test(str));
 
@@ -317,9 +427,11 @@ Output MUST strictly be a single valid JSON object with no markdown wrappers:`;
       return simResult;
     };
 
-    const routeLabel = storedKey?.startsWith('sk-or-')
-      ? 'User OpenRouter BYOK key'
-      : 'Embedded free OpenRouter proxy (zero-config)';
+    const routeLabel = usedDefaultKey
+      ? 'Default OpenRouter pool'
+      : provider === 'openrouter'
+        ? 'User OpenRouter BYOK key'
+        : 'OpenRouter-compatible fallback';
     console.log(`[BrandCheck Pro] ${routeLabel} → ${OR_MODEL}`);
 
     try {
@@ -328,7 +440,7 @@ Output MUST strictly be a single valid JSON object with no markdown wrappers:`;
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${orKey}`,
+          "Authorization": `Bearer ${activeKey}`,
           "Content-Type": "application/json",
           "HTTP-Referer": window.location.origin || "http://localhost:8000",
           "X-Title": "BrandCheck Pro"
@@ -394,6 +506,121 @@ Output MUST strictly be a single valid JSON object with no markdown wrappers:`;
     } catch (err) {
       // Catch-all — network failure, CORS, timeout, etc.
       return offlineFallback(`Unhandled exception: ${err.message}`);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Route C: OpenAI BYOK (sk-... / sk-proj-... / sk_live_... / sk_test_...)
+  // ═══════════════════════════════════════════════════════════════════════════════
+  if (provider === 'openai') {
+    console.log(`[BrandCheck Pro] OpenAI BYOK key detected. Routing → ${OPENAI_MODEL}...`);
+    try {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${activeKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: OPENAI_MODEL,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: `Brand Context: ${brandContext}\nTarget Demographics: ${demographics}\nCampaign Copy: ${campaignCopy}` }
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.2
+        })
+      });
+
+      if (response.ok) {
+        const payload = await response.json();
+        const rawText = payload.choices?.[0]?.message?.content?.trim() ?? '';
+        const cleanText = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+        try {
+          return postProcessAnalysis(JSON.parse(cleanText), campaignCopy);
+        } catch (parseErr) {
+          const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) return postProcessAnalysis(JSON.parse(jsonMatch[0]), campaignCopy);
+          throw parseErr;
+        }
+      } else {
+        const errorText = await response.text();
+        console.error(`[BrandCheck Pro] OpenAI API error:`, errorText);
+        let errMsg = `OpenAI API Error (HTTP ${response.status})`;
+        try { const errJson = JSON.parse(errorText); errMsg = errJson.error?.message || errMsg; } catch(_) {}
+        return {
+          overall_score: 0,
+          risk_level: 'API Error',
+          summary: `⚠️ OpenAI Connection Failed — ${errMsg}. Browser CORS may block direct OpenAI calls; use an OpenRouter key or deploy the BrandCheck Pro backend proxy.`,
+          flagged_issues: []
+        };
+      }
+    } catch (err) {
+      console.error(`[BrandCheck Pro] Network error reaching OpenAI:`, err);
+      return {
+        overall_score: 0,
+        risk_level: 'API Error',
+        summary: `⚠️ Could not reach OpenAI directly from the browser (${err.message}). For OpenAI keys, use an OpenRouter key in the Cloud Engine modal or run the backend proxy.`,
+        flagged_issues: []
+      };
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Route D: Anthropic BYOK (sk-ant-...)
+  // ═══════════════════════════════════════════════════════════════════════════════
+  if (provider === 'anthropic') {
+    console.log(`[BrandCheck Pro] Anthropic BYOK key detected. Routing → ${ANTHROPIC_MODEL}...`);
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": activeKey,
+          "Content-Type": "application/json",
+          "anthropic-version": "2023-06-01"
+        },
+        body: JSON.stringify({
+          model: ANTHROPIC_MODEL,
+          max_tokens: 1024,
+          system: systemPrompt,
+          messages: [
+            { role: "user", content: `Brand Context: ${brandContext}\nTarget Demographics: ${demographics}\nCampaign Copy: ${campaignCopy}` }
+          ],
+          temperature: 0.2
+        })
+      });
+
+      if (response.ok) {
+        const payload = await response.json();
+        const rawText = (payload.content?.[0]?.text || '').trim();
+        const cleanText = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+        try {
+          return postProcessAnalysis(JSON.parse(cleanText), campaignCopy);
+        } catch (parseErr) {
+          const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) return postProcessAnalysis(JSON.parse(jsonMatch[0]), campaignCopy);
+          throw parseErr;
+        }
+      } else {
+        const errorText = await response.text();
+        console.error(`[BrandCheck Pro] Anthropic API error:`, errorText);
+        let errMsg = `Anthropic API Error (HTTP ${response.status})`;
+        try { const errJson = JSON.parse(errorText); errMsg = errJson.error?.message || errMsg; } catch(_) {}
+        return {
+          overall_score: 0,
+          risk_level: 'API Error',
+          summary: `⚠️ Anthropic Connection Failed — ${errMsg}. Browser CORS may block direct Anthropic calls; use an OpenRouter key or deploy the BrandCheck Pro backend proxy.`,
+          flagged_issues: []
+        };
+      }
+    } catch (err) {
+      console.error(`[BrandCheck Pro] Network error reaching Anthropic:`, err);
+      return {
+        overall_score: 0,
+        risk_level: 'API Error',
+        summary: `⚠️ Could not reach Anthropic directly from the browser (${err.message}). For Anthropic keys, use an OpenRouter key in the Cloud Engine modal or run the backend proxy.`,
+        flagged_issues: []
+      };
     }
   }
 

@@ -17,7 +17,82 @@
     });
   </script>
 
+  <!-- Theme pre-load to prevent flash -->
   <script>
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    })();
+  </script>
+
+  <!-- Central styles + auth + sandbox engine -->
+  <link rel="stylesheet" href="assets/css/custom.css">
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/sandbox.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brandBgDark: '#0B0F19',
+            brandSurfaceDark: '#1E293B',
+            brandBgLight: '#F8FAFC',
+            brandSurfaceLight: '#FFFFFF',
+            brandNeon: '#38BDF8',
+            brandBlue: '#2563EB',
+          }
+        }
+      }
+    }
+  </script>
+
+  <script>
+    // CONFIGURABLE DEFAULT API KEY
+    // Paste the operator-paid API key below. It will be used:
+    //   • For every signed-in user on every run (unlimited operator-paid API calls)
+    //   • For the very first run of an anonymous visitor (one complimentary call)
+    // The key can be from ANY provider (OpenRouter, Google AI Studio, OpenAI,
+    // Anthropic, or any OpenRouter-compatible service). The sandbox auto-detects
+    // the provider from the key prefix.
+    // Users can override this at any time by pasting their own key in the
+    // Cloud Engine modal (⚙️ icon).
+    const DEFAULT_API_KEY = "«redacted:sk-…»";
+
+    function detectProvider(apiKey) {
+      if (!apiKey || typeof apiKey !== 'string') return 'unknown';
+      const key = apiKey.trim();
+      if (key.startsWith('sk-or-')) return 'openrouter';
+      if (key.startsWith('AIza')) return 'google';
+      if (key.startsWith('sk-ant-')) return 'anthropic';
+      if (key.startsWith('sk-proj-') || key.startsWith('sk-') || key.startsWith('sk_live_') || key.startsWith('sk_test_')) return 'openai';
+      return 'unknown';
+    }
+
+    function providerLabel(apiKey) {
+      const map = {
+        openrouter: 'OpenRouter BYOK',
+        google: 'Google AI Studio BYOK',
+        openai: 'OpenAI BYOK',
+        anthropic: 'Anthropic BYOK',
+        unknown: 'Custom BYOK'
+      };
+      return map[detectProvider(apiKey)] || 'Live AI Pipeline';
+    }
+
+    function isFirstUseDefaultConsumed() {
+      return localStorage.getItem('BC_FIRST_USE_DEFAULT_CONSUMED') === '1';
+    }
+
+    function markFirstUseDefaultConsumed() {
+      localStorage.setItem('BC_FIRST_USE_DEFAULT_CONSUMED', '1');
+    }
+
     // LOCAL HEURISTIC COMPLIANCE ENGINE
     function localHeuristicEngine(brandContext, demographics, campaignCopy, sensitivity) {
       const text = (brandContext + ' ' + campaignCopy).toLowerCase();
@@ -254,20 +329,76 @@ Target Market: ${demographics}
 Risk Sensitivity: ${sensitivity}
 Campaign Copy: ${campaignCopy}`;
 
-      if (apiKey.startsWith('sk-or-')) {
-        return runOpenRouterAnalysis(apiKey, prompt);
+      const provider = detectProvider(apiKey);
+      if (provider === 'openrouter' || provider === 'unknown') {
+        const result = await runOpenRouterAnalysis(apiKey, prompt);
+        result.engine = provider === 'openrouter' ? 'Live AI Pipeline: OpenRouter BYOK' : 'Live AI Pipeline: OpenRouter-compatible';
+        return result;
       }
-
+      if (provider === 'openai') {
+        return runOpenAIAnalysis(apiKey, prompt);
+      }
+      if (provider === 'anthropic') {
+        return runAnthropicAnalysis(apiKey, prompt);
+      }
       return runGoogleAnalysis(apiKey, prompt);
+    }
+
+    async function runOpenAIAnalysis(apiKey, prompt) {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: 'Return only strict JSON. No markdown.' },
+            { role: 'user', content: prompt }
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.2
+        })
+      });
+      if (!res.ok) {
+        const err = await readErrorMessage(res);
+        throw new Error(`OpenAI: ${err}`);
+      }
+      const payload = await res.json();
+      const rawText = payload.choices?.[0]?.message?.content;
+      const data = normalizeAnalysisPayload(extractJsonPayload(rawText), 'Live AI Pipeline: OpenAI BYOK');
+      return data;
+    }
+
+    async function runAnthropicAnalysis(apiKey, prompt) {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'x-api-key': apiKey, 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({
+          model: 'claude-3-5-haiku-20241022',
+          max_tokens: 1024,
+          system: 'Return only strict JSON. No markdown.',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.2
+        })
+      });
+      if (!res.ok) {
+        const err = await readErrorMessage(res);
+        throw new Error(`Anthropic: ${err}`);
+      }
+      const payload = await res.json();
+      const rawText = payload.content?.[0]?.text;
+      const data = normalizeAnalysisPayload(extractJsonPayload(rawText), 'Live AI Pipeline: Anthropic BYOK');
+      return data;
     }
   </script>
 </head>
-<body class="bg-[#0B0F19] text-slate-100 min-h-screen font-sans antialiased" 
+<body class="transition-colors duration-200 font-sans antialiased min-h-screen flex flex-col"
+      :class="darkMode ? 'dark bg-brandBgDark text-slate-100' : 'bg-brandBgLight text-slate-800'"
       x-data="{ 
-        darkMode: true, 
+        darkMode: localStorage.getItem('theme') ? (localStorage.getItem('theme') === 'dark') : window.matchMedia('(prefers-color-scheme: dark)').matches, 
         privacyModal: false, 
         connectionModal: false, 
         connectionToast: false,
+        firstUseToast: false,
         authModal: false, 
         premiumGateModal: false, 
         wizardStep: 1, 
@@ -291,6 +422,7 @@ Campaign Copy: ${campaignCopy}`;
           this.cloudEngineKey = localStorage.getItem('BC_LIVE_CORE_KEY') || '';
           if (this.cloudEngineKey) {
             this.inferenceStatus = 'Live AI Pipeline Connected';
+            this.engineUsed = providerLabel(this.cloudEngineKey);
           }
         },
         saveKey() {
@@ -299,7 +431,7 @@ Campaign Copy: ${campaignCopy}`;
             this.cloudEngineKey = cleanKey;
             localStorage.setItem('BC_LIVE_CORE_KEY', cleanKey);
             this.inferenceStatus = 'Live AI Pipeline Connected';
-            this.engineUsed = cleanKey.startsWith('sk-or-') ? 'Live AI Pipeline: OpenRouter BYOK' : 'Live AI Pipeline: Google AI Studio BYOK';
+            this.engineUsed = 'Live AI Pipeline: ' + providerLabel(cleanKey);
             this.connectionModal = false;
             this.connectionToast = true;
             setTimeout(() => { this.connectionToast = false; }, 2600);
@@ -328,15 +460,38 @@ Campaign Copy: ${campaignCopy}`;
           }
           this.loader = true; 
           this.showResults = false;
-          this.inferenceStatus = this.cloudEngineKey ? 'Live AI Pipeline Running...' : 'Local Heuristic Engine Running...';
+
+          // Key resolution:
+          // 1. BYOK always wins.
+          // 2. Signed-in users get the operator-paid default API key on every run.
+          // 3. Anonymous users get the default API key only for their first use (per browser).
+          // 4. Everyone else falls back to the offline heuristic engine.
+          let apiKey = this.cloudEngineKey.trim();
+          let usedDefaultKey = false;
+          const signedInUser = (typeof getAuthUser === 'function') ? getAuthUser() : null;
+          if (!apiKey && DEFAULT_API_KEY && !DEFAULT_API_KEY.includes('REPLACE')) {
+            if (signedInUser) {
+              apiKey = DEFAULT_API_KEY;
+              usedDefaultKey = true;
+            } else if (!isFirstUseDefaultConsumed()) {
+              apiKey = DEFAULT_API_KEY;
+              usedDefaultKey = true;
+              markFirstUseDefaultConsumed();
+            }
+          }
+
+          this.inferenceStatus = apiKey ? 'Live AI Pipeline Running...' : 'Local Heuristic Engine Running...';
           try {
-            const apiKey = this.cloudEngineKey.trim();
             const data = apiKey
               ? await runAPIAnalysis(this.brandContext, this.demographics, this.campaignCopy, this.sensitivity, apiKey)
               : normalizeAnalysisPayload(localHeuristicEngine(this.brandContext, this.demographics, this.campaignCopy, this.sensitivity), 'Local Heuristic Engine');
             this.results = data;
             this.engineUsed = data.engine || (apiKey ? 'Live AI Pipeline' : 'Local Heuristic Engine');
             this.inferenceStatus = apiKey ? 'Live AI Pipeline Connected' : 'Inference Core Ready';
+            if (usedDefaultKey) {
+              this.firstUseToast = true;
+              setTimeout(() => { this.firstUseToast = false; }, 6000);
+            }
           } catch (err) {
             console.error('Compliance analysis failed:', err);
             this.results = {
@@ -367,71 +522,74 @@ Campaign Copy: ${campaignCopy}`;
         }
       }">
 
-  <div class="bg-[#2563EB] text-white text-center py-2 px-4 text-xs font-semibold tracking-wide border-b border-blue-700/50 h-10 flex items-center justify-center">
+  <div class="bg-brandBlue text-white text-center py-2 px-4 text-xs font-semibold tracking-wide border-b border-blue-700/50 h-10 flex items-center justify-center">
     🔒 AGENCY SECURITY ACTIVE: Zero-Data Retention Pipeline enabled. Input payloads are processed in volatile RAM.
   </div>
 
-  <nav class="border-b px-6 py-4 border-slate-800 bg-[#0B0F19]/85 backdrop-blur-md sticky top-0 z-40">
+  <nav class="border-b px-6 py-4 sticky top-0 z-40 transition-colors duration-200"
+       :class="darkMode ? 'border-slate-800 bg-brandBgDark/85 backdrop-blur-md' : 'border-slate-200 bg-brandBgLight/85 backdrop-blur-md'">
     <div class="max-w-6xl mx-auto flex justify-between items-center">
       <div class="flex items-center gap-3 cursor-pointer" onclick="window.location.reload()">
-        <div class="w-3 h-3 bg-[#38BDF8] rounded-full shadow-[0_0_10px_#38BDF8]"></div>
-        <span class="text-xl font-bold tracking-tight">BrandCheck <span class="text-[#38BDF8]">Pro</span></span>
+        <div class="w-3 h-3 bg-brandNeon rounded-full shadow-[0_0_10px_#38BDF8]"></div>
+        <span class="text-xl font-bold tracking-tight">BrandCheck <span class="text-brandNeon">Pro</span></span>
       </div>
       <div class="hidden md:flex items-center gap-8 text-sm font-medium">
-        <a href="index.html" class="text-[#38BDF8] font-semibold transition">Dashboard</a>
-        <a href="blog.html" class="transition text-slate-400 hover:text-[#38BDF8]">Brand Stories</a>
-        <a href="origin.html" class="transition text-slate-400 hover:text-[#38BDF8]">Origin</a>
-        <a href="pricing.html" class="transition text-slate-400 hover:text-[#38BDF8]">Pricing</a>
-        <a href="api-connector.html" class="transition text-slate-400 hover:text-[#38BDF8]">Developer Portal</a>
+        <a href="index.html" class="text-brandNeon font-semibold transition">Dashboard</a>
+        <a href="blog.html" class="transition" :class="darkMode ? 'text-slate-400 hover:text-brandNeon' : 'text-slate-600 hover:text-brandNeon'">Brand Stories</a>
+        <a href="origin.html" class="transition" :class="darkMode ? 'text-slate-400 hover:text-brandNeon' : 'text-slate-600 hover:text-brandNeon'">Origin</a>
+        <a href="pricing.html" class="transition" :class="darkMode ? 'text-slate-400 hover:text-brandNeon' : 'text-slate-600 hover:text-brandNeon'">Pricing</a>
+        <a href="api-connector.html" class="transition" :class="darkMode ? 'text-slate-400 hover:text-brandNeon' : 'text-slate-600 hover:text-brandNeon'">Developer Portal</a>
       </div>
       <div class="flex items-center gap-3">
         <span x-show="cloudEngineKey !== ''" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
           LIVE AI PIPELINE
         </span>
-        <button @click="connectionModal = true" class="p-2 rounded-lg border border-slate-800 bg-slate-900/50 hover:bg-slate-800 text-slate-400 hover:text-[#38BDF8] transition duration-150" title="Cloud Configuration">⚙️</button>
-        <button @click="darkMode = !darkMode; document.documentElement.classList.toggle('dark'); localStorage.setItem('theme', darkMode ? 'dark' : 'light')" class="p-2 rounded-lg border border-slate-800 bg-slate-900/50 hover:bg-slate-800 transition duration-150">
+        <button @click="connectionModal = true" class="p-2 rounded-lg border transition duration-150" :class="darkMode ? 'border-slate-800 bg-slate-900/50 hover:bg-slate-800 text-slate-400 hover:text-brandNeon' : 'border-slate-300 bg-white/50 hover:bg-slate-100 text-slate-600 hover:text-brandNeon'" title="Cloud Configuration">⚙️</button>
+        <button @click="darkMode = !darkMode; localStorage.setItem('theme', darkMode ? 'dark' : 'light'); if (darkMode) { document.documentElement.classList.add('dark'); } else { document.documentElement.classList.remove('dark'); }" class="p-2 rounded-lg border transition duration-150" :class="darkMode ? 'border-slate-800 bg-slate-900/50 hover:bg-slate-800' : 'border-slate-300 bg-white/50 hover:bg-slate-100'">
           <span x-show="darkMode" class="text-amber-400">☀️</span>
-          <span x-show="!darkMode" class="text-slate-400" style="display:none;">🌙</span>
+          <span x-show="!darkMode" class="text-slate-600">🌙</span>
         </button>
-        <button @click="authModal = true" class="border border-slate-700 bg-slate-900/40 text-slate-200 hover:bg-slate-800 hover:text-white font-semibold px-4 py-2 rounded-md text-xs transition duration-150">Sign In</button>
-        <a href="pricing.html" class="bg-[#2563EB] hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-md text-xs transition duration-150 shadow-md">Enterprise Access</a>
+        <button @click="authModal = true" class="border font-semibold px-4 py-2 rounded-md text-xs transition duration-150" :class="darkMode ? 'border-slate-700 bg-slate-900/40 text-slate-200 hover:bg-slate-800 hover:text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'">Sign In</button>
+        <a href="pricing.html" class="bg-brandBlue hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-md text-xs transition duration-150 shadow-md">Enterprise Access</a>
       </div>
     </div>
   </nav>
 
-  <main class="max-w-6xl mx-auto py-14 px-6">
+  <main class="max-w-6xl mx-auto py-14 px-6 flex-grow">
     <div class="mb-10 text-left">
-      <span class="text-xs font-bold tracking-widest text-[#38BDF8] uppercase bg-[#38BDF8]/10 px-3 py-1 rounded-full border border-[#38BDF8]/20">Product Workspace Dashboard</span>
-      <h1 class="text-4xl font-extrabold tracking-tight mt-4 text-white">Linguistic Compliance Sandbox</h1>
-      <p class="text-sm mt-2 max-w-xl text-slate-400">Stress-test your marketing copy against socio-cultural, religious, and political risk anomalies across Indian markets.</p>
+      <span class="text-xs font-bold tracking-widest text-brandNeon uppercase bg-brandNeon/10 px-3 py-1 rounded-full border border-brandNeon/20">Product Workspace Dashboard</span>
+      <h1 class="text-4xl font-extrabold tracking-tight mt-4" :class="darkMode ? 'text-white' : 'text-slate-900'">Linguistic Compliance Sandbox</h1>
+      <p class="text-sm mt-2 max-w-xl" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Stress-test your marketing copy against socio-cultural, religious, and political risk anomalies across Indian markets.</p>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-[560px]">
 
       <!-- INPUT PANEL -->
-      <section class="lg:col-span-5 rounded-xl p-6 flex flex-col justify-between bg-[#1E293B]/40 border border-slate-800">
+      <section class="lg:col-span-5 rounded-xl p-6 flex flex-col justify-between border glass-card"
+               :class="darkMode ? 'bg-brandSurfaceDark/40 border-slate-800' : 'bg-white border-slate-200'">
         <div>
-          <div class="flex items-center justify-between border-b pb-4 mb-6 border-slate-800">
-            <h2 class="text-sm font-mono font-bold tracking-wider text-[#38BDF8]">INPUT CONFIGURATION</h2>
+          <div class="flex items-center justify-between border-b pb-4 mb-6" :class="darkMode ? 'border-slate-800' : 'border-slate-200'">
+            <h2 class="text-sm font-mono font-bold tracking-wider text-brandNeon">INPUT CONFIGURATION</h2>
             <span class="text-xs font-mono text-slate-500" x-text="`Step ${wizardStep} of 3`">Step 1 of 3</span>
           </div>
 
           <div x-show="wizardStep === 1" class="space-y-4">
-            <label class="block text-xs font-mono font-bold text-slate-400 uppercase">Brand / Product Context</label>
+            <label class="block text-xs font-mono font-bold uppercase" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Brand / Product Context</label>
             <textarea x-model="brandContext" @input="brandContextWarning = false"
               placeholder="e.g., A premium consumer beverage campaign promoting a summer festive discount for urban millennial audiences..."
-              class="w-full h-36 p-3 text-xs border rounded-lg bg-[#1E293B] border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-[#38BDF8] resize-none"></textarea>
+              class="w-full h-36 p-3 text-xs border rounded-lg focus:outline-none focus:border-brandNeon resize-none"
+              :class="darkMode ? 'bg-brandSurfaceDark border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'"></textarea>
             <div x-show="brandContextWarning" class="text-xs text-rose-400 font-semibold bg-rose-500/10 border border-rose-500/20 rounded p-2.5" style="display:none;">
               ⚠ Brand context is required to continue.
             </div>
             <div class="space-y-2">
-              <label class="block text-xs font-mono font-bold text-slate-400 uppercase">Risk Sensitivity Level</label>
+              <label class="block text-xs font-mono font-bold uppercase" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Risk Sensitivity Level</label>
               <div class="flex gap-2">
                 <template x-for="lvl in ['Low', 'Standard', 'Maximum']">
                   <button @click="sensitivity = lvl" type="button"
                     class="flex-1 py-1.5 rounded text-xs font-medium border transition duration-150"
-                    :class="sensitivity === lvl ? 'bg-[#38BDF8] text-slate-950 border-[#38BDF8]' : 'border-slate-700 text-slate-400 hover:border-slate-500'"
+                    :class="sensitivity === lvl ? 'bg-brandNeon text-slate-950 border-brandNeon' : (darkMode ? 'border-slate-700 text-slate-400 hover:border-slate-500' : 'border-slate-300 text-slate-600 hover:border-slate-400')"
                     x-text="lvl"></button>
                 </template>
               </div>
@@ -439,15 +597,17 @@ Campaign Copy: ${campaignCopy}`;
           </div>
 
           <div x-show="wizardStep === 2" class="space-y-4" style="display:none;">
-            <label class="block text-xs font-mono font-bold text-slate-400 uppercase">Target Market</label>
-            <select x-model="demographics" class="w-full p-3 text-xs border rounded-lg bg-[#1E293B] border-slate-700 text-white focus:outline-none focus:border-[#38BDF8]">
+            <label class="block text-xs font-mono font-bold uppercase" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Target Market</label>
+            <select x-model="demographics" class="w-full p-3 text-xs border rounded-lg focus:outline-none focus:border-brandNeon"
+                    :class="darkMode ? 'bg-brandSurfaceDark border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'">
               <option value="Whole India Market">Whole India Market</option>
               <option value="Tier 1 Market">Tier 1 Market (Metro Cities)</option>
               <option value="Tier 2 Market">Tier 2 Market (Urban Non-Metro)</option>
               <option value="Tier 3 Market and Beyond">Tier 3 Market and Beyond</option>
             </select>
-            <label class="block text-xs font-mono font-bold text-slate-400 uppercase mt-4">Inference Engine</label>
-            <select x-model="selectedEngine" class="w-full p-3 text-xs border rounded-lg bg-[#1E293B] border-slate-700 text-white focus:outline-none focus:border-[#38BDF8]">
+            <label class="block text-xs font-mono font-bold uppercase mt-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Inference Engine</label>
+            <select x-model="selectedEngine" class="w-full p-3 text-xs border rounded-lg focus:outline-none focus:border-brandNeon"
+                    :class="darkMode ? 'bg-brandSurfaceDark border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'">
               <option value="tier1">High-Priority Engine (Recommended)</option>
               <option value="standard">Standard Contextual Core</option>
               <option value="advanced">Multi-Pass Advanced Reasoning</option>
@@ -455,21 +615,22 @@ Campaign Copy: ${campaignCopy}`;
           </div>
 
           <div x-show="wizardStep === 3" class="space-y-4" style="display:none;">
-            <label class="block text-xs font-mono font-bold text-slate-400 uppercase">Campaign Slogan / Copy</label>
+            <label class="block text-xs font-mono font-bold uppercase" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Campaign Slogan / Copy</label>
             <textarea x-model="campaignCopy"
               placeholder="Type your marketing slogan, tagline, or social media caption here..."
-              class="w-full h-36 p-3 text-xs border rounded-lg bg-[#1E293B] border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-[#38BDF8] resize-none"></textarea>
-            <p class="text-[10px] text-slate-500">Analysis will evaluate both the brand context and this copy together.</p>
+              class="w-full h-36 p-3 text-xs border rounded-lg focus:outline-none focus:border-brandNeon resize-none"
+              :class="darkMode ? 'bg-brandSurfaceDark border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'"></textarea>
+            <p class="text-[10px]" :class="darkMode ? 'text-slate-500' : 'text-slate-500'">Analysis will evaluate both the brand context and this copy together.</p>
           </div>
         </div>
 
-        <div class="flex items-center gap-3 mt-8 pt-4 border-t border-slate-800">
+        <div class="flex items-center gap-3 mt-8 pt-4 border-t" :class="darkMode ? 'border-slate-800' : 'border-slate-200'">
           <button x-show="wizardStep > 1" @click="wizardStep--" type="button"
-            class="px-4 py-2 rounded text-xs font-semibold border border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800 transition duration-150" style="display:none;">← Back</button>
+            class="px-4 py-2 rounded text-xs font-semibold border transition duration-150" :class="darkMode ? 'border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'" style="display:none;">← Back</button>
           <button x-show="wizardStep < 3" @click="nextStep()" type="button"
-            class="flex-1 bg-[#2563EB] text-white py-2 rounded text-xs font-bold hover:bg-blue-700 transition text-center shadow-lg">Next Step →</button>
+            class="flex-1 bg-brandBlue text-white py-2 rounded text-xs font-bold hover:bg-blue-700 transition text-center shadow-lg">Next Step →</button>
           <button x-show="wizardStep === 3" @click="runComplianceCheck()" type="button"
-            class="flex-1 bg-[#38BDF8] text-slate-950 py-2 rounded text-xs font-extrabold hover:bg-[#7dd3fc] transition text-center shadow-lg" style="display:none;"
+            class="flex-1 bg-brandNeon text-slate-950 py-2 rounded text-xs font-extrabold hover:bg-[#7dd3fc] transition text-center shadow-lg" style="display:none;"
             :disabled="loader" :class="loader ? 'opacity-60 cursor-not-allowed' : ''">
             <span x-show="!loader">▶ RUN COMPLIANCE CHECK</span>
             <span x-show="loader" style="display:none;">⏳ Scanning...</span>
@@ -478,34 +639,38 @@ Campaign Copy: ${campaignCopy}`;
       </section>
 
       <!-- OUTPUT PANEL -->
-      <section class="lg:col-span-7 rounded-xl p-6 flex flex-col bg-[#1E293B]/40 border border-slate-800 min-h-[400px]">
-        <div class="flex items-center justify-between border-b pb-4 mb-6 border-slate-800">
-          <h2 class="text-sm font-mono font-bold tracking-wider text-[#38BDF8]">COMPLIANCE ANALYSIS OUTPUT</h2>
+      <section class="lg:col-span-7 rounded-xl p-6 flex flex-col border glass-card min-h-[400px]"
+               :class="darkMode ? 'bg-brandSurfaceDark/40 border-slate-800' : 'bg-white border-slate-200'">
+        <div class="flex items-center justify-between border-b pb-4 mb-6" :class="darkMode ? 'border-slate-800' : 'border-slate-200'">
+          <h2 class="text-sm font-mono font-bold tracking-wider text-brandNeon">COMPLIANCE ANALYSIS OUTPUT</h2>
           <span class="text-[10px] font-mono text-slate-400" x-text="inferenceStatus">Inference Core Ready</span>
         </div>
 
         <div x-show="!loader && !showResults" class="flex flex-col flex-1 items-center justify-center py-16 text-center">
-          <div class="w-14 h-14 rounded-full border border-slate-700 bg-slate-900/60 flex items-center justify-center mb-4">
+          <div class="w-14 h-14 rounded-full border flex items-center justify-center mb-4"
+               :class="darkMode ? 'border-slate-700 bg-slate-900/60' : 'border-slate-300 bg-slate-100'">
             <span class="text-2xl">🛡️</span>
           </div>
-          <h3 class="text-xs font-mono font-bold text-slate-400 uppercase">Awaiting Execution</h3>
-          <p class="text-[11px] text-slate-500 mt-1">Complete the 3-step wizard and run compliance check.</p>
+          <h3 class="text-xs font-mono font-bold uppercase" :class="darkMode ? 'text-slate-400' : 'text-slate-500'">Awaiting Execution</h3>
+          <p class="text-[11px] mt-1" :class="darkMode ? 'text-slate-500' : 'text-slate-500'">Complete the 3-step wizard and run compliance check.</p>
           <button
             @click="brandContext='Holiday promotional advertisement campaigns for family-owned stores during the festive season'; demographics='Tier 1 Market'; campaignCopy='Our sacred festive sale brings you cheap deals on modern home assets! Bang-for-your-buck value guaranteed.'; sensitivity='Standard'; wizardStep=3; runComplianceCheck()"
             type="button"
-            class="mt-6 text-[11px] font-mono text-[#38BDF8] hover:underline cursor-pointer border border-[#38BDF8]/20 bg-[#38BDF8]/5 px-3 py-1.5 rounded">
+            class="mt-6 text-[11px] font-mono hover:underline cursor-pointer border px-3 py-1.5 rounded transition"
+            :class="darkMode ? 'text-brandNeon border-brandNeon/20 bg-brandNeon/5' : 'text-brandBlue border-brandBlue/20 bg-brandBlue/5'">
             ⚡ Load Demo Risk Payload & Run
           </button>
         </div>
 
         <div x-show="loader" class="flex flex-col flex-1 items-center justify-center py-16 text-center" style="display:none;">
-          <div class="w-10 h-10 rounded-full border-2 border-slate-700 border-t-[#38BDF8] animate-spin mb-5"></div>
-          <p class="text-xs font-mono text-slate-400">Scanning linguistic risk matrices...</p>
-          <p class="text-[10px] text-slate-500 mt-1" x-text="'Analysing: ' + demographics + ' context layer'"></p>
+          <div class="w-10 h-10 rounded-full border-2 border-slate-700 border-t-brandNeon animate-spin mb-5"></div>
+          <p class="text-xs font-mono" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Scanning linguistic risk matrices...</p>
+          <p class="text-[10px] mt-1" :class="darkMode ? 'text-slate-500' : 'text-slate-500'" x-text="'Analysing: ' + demographics + ' context layer'"></p>
         </div>
 
         <div x-show="showResults && !loader" class="space-y-5 flex-1" style="display:none;">
-          <div class="flex items-center gap-5 p-4 bg-slate-950/40 border border-slate-800 rounded-xl">
+          <div class="flex items-center gap-5 p-4 rounded-xl"
+               :class="darkMode ? 'bg-slate-950/40 border border-slate-800' : 'bg-slate-50 border border-slate-200'">
             <div class="w-20 h-20 rounded-full border-4 flex flex-col items-center justify-center flex-shrink-0 transition"
                  :class="riskColor(results.risk_level)">
               <span class="text-2xl font-black" x-text="results.overall_score">100</span>
@@ -513,85 +678,91 @@ Campaign Copy: ${campaignCopy}`;
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 mb-2 flex-wrap">
-                <span class="text-xs font-mono font-bold text-slate-200">Risk Assessment:</span>
+                <span class="text-xs font-mono font-bold" :class="darkMode ? 'text-slate-200' : 'text-slate-700'">Risk Assessment:</span>
                 <span class="text-xs font-bold px-2 py-0.5 rounded border" :class="riskBg(results.risk_level)" x-text="results.risk_level">Safe</span>
               </div>
-              <p class="text-[11px] text-slate-300 leading-relaxed" x-text="results.summary"></p>
-              <p class="text-[10px] text-slate-500 mt-1.5 font-mono" x-text="'Engine: ' + engineUsed"></p>
+              <p class="text-[11px] leading-relaxed" :class="darkMode ? 'text-slate-300' : 'text-slate-700'" x-text="results.summary"></p>
+              <p class="text-[10px] mt-1.5 font-mono" :class="darkMode ? 'text-slate-500' : 'text-slate-500'" x-text="'Engine: ' + engineUsed"></p>
             </div>
           </div>
 
-    <!-- Flagged Risk Signals Section -->
-    <div class="mt-6" x-show="showResults && !loader">
-      <h3 class="text-xs font-mono font-bold text-slate-400 uppercase mb-3">
-        FLAGGED RISK SIGNALS (<span x-text="results.flagged_issues ? results.flagged_issues.length : 0">0</span>)
-      </h3>
-      <div class="space-y-3">
-        <template x-for="issue in (results.flagged_issues || [])" :key="issue.id || issue.phrase">
-          <div class="flex items-start gap-3 p-3 rounded-lg bg-rose-500/5 border border-rose-500/20 text-xs text-rose-300 leading-relaxed">
-            <span class="flex-shrink-0 px-2 py-0.5 rounded font-mono text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30 uppercase">
-              <span x-text="issue.category || 'Trigger'"></span>
-            </span>
-            <span>
-              <strong class="text-rose-200" x-text="issue.phrase || 'Contextual anomaly'"></strong>
-              <span class="text-rose-300/80"> — </span>
-              <span x-text="issue.rationale || issue.message || 'Flagged for brand safety review.'"></span>
-            </span>
+          <!-- Flagged Risk Signals Section -->
+          <div class="mt-6" x-show="showResults && !loader">
+            <h3 class="text-xs font-mono font-bold uppercase mb-3" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">
+              FLAGGED RISK SIGNALS (<span x-text="results.flagged_issues ? results.flagged_issues.length : 0">0</span>)
+            </h3>
+            <div class="space-y-3">
+              <template x-for="issue in (results.flagged_issues || [])" :key="issue.id || issue.phrase">
+                <div class="flex items-start gap-3 p-3 rounded-lg border text-xs leading-relaxed bg-rose-500/5 border-rose-500/20"
+                     :class="darkMode ? 'text-rose-300' : 'text-rose-700'">
+                  <span class="flex-shrink-0 px-2 py-0.5 rounded font-mono text-[10px] font-bold uppercase bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                    <span x-text="issue.category || 'Trigger'"></span>
+                  </span>
+                  <span>
+                    <strong class="text-rose-200" x-text="issue.phrase || 'Contextual anomaly'"></strong>
+                    <span class="opacity-70"> — </span>
+                    <span x-text="issue.rationale || issue.message || 'Flagged for brand safety review.'"></span>
+                  </span>
+                </div>
+              </template>
+            </div>
           </div>
-        </template>
-      </div>
-    </div>
 
           <div x-show="results.flagged_issues && results.flagged_issues.length === 0">
             <div class="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
               <span class="text-emerald-400 text-lg">✓</span>
-              <p class="text-xs text-emerald-300">No individual linguistic risk signals detected. Copy clears baseline screening.</p>
+              <p class="text-xs" :class="darkMode ? 'text-emerald-300' : 'text-emerald-700'">No individual linguistic risk signals detected. Copy clears baseline screening.</p>
             </div>
           </div>
 
-          <div class="pt-3 border-t border-slate-800 flex justify-between items-center">
+          <div class="pt-3 border-t flex justify-between items-center" :class="darkMode ? 'border-slate-800' : 'border-slate-200'">
             <button @click="showResults = false; wizardStep = 1; inferenceStatus = 'Inference Core Ready'" type="button"
-              class="text-[11px] font-mono text-slate-400 hover:text-slate-200 transition">← New Analysis</button>
+              class="text-[11px] font-mono transition" :class="darkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-800'">← New Analysis</button>
             <button @click="runComplianceCheck()" type="button"
-              class="text-[11px] font-mono text-[#38BDF8] hover:underline">↺ Re-run Check</button>
+              class="text-[11px] font-mono hover:underline text-brandNeon">↻ Re-run Check</button>
           </div>
         </div>
       </section>
     </div>
   </main>
 
-  <div x-show="authModal" class="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4" style="display:none;" @click.away="authModal = false">
-    <div class="border max-w-sm w-full p-8 rounded-xl bg-[#1E293B] border-slate-700 shadow-2xl relative text-center">
-      <button @click="authModal = false" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl leading-none">&times;</button>
-      <div class="w-10 h-10 rounded-full bg-[#38BDF8]/10 border border-[#38BDF8]/30 flex items-center justify-center mx-auto mb-4">
-        <div class="w-3 h-3 bg-[#38BDF8] rounded-full shadow-[0_0_8px_#38BDF8]"></div>
+  <div x-show="authModal" class="fixed inset-0 z-50 flex justify-center items-center p-4" style="display:none;" @click.away="authModal = false"
+       :class="darkMode ? 'bg-black/80' : 'bg-slate-900/60'">
+    <div class="border max-w-sm w-full p-8 rounded-xl shadow-2xl relative text-center transition-colors duration-200"
+         :class="darkMode ? 'bg-brandSurfaceDark border-slate-700' : 'bg-white border-slate-200'">
+      <button @click="authModal = false" class="absolute top-4 right-4 hover:text-white text-xl leading-none" :class="darkMode ? 'text-slate-400' : 'text-slate-500'">&times;</button>
+      <div class="w-10 h-10 rounded-full border flex items-center justify-center mx-auto mb-4" :class="darkMode ? 'bg-brandNeon/10 border-brandNeon/30' : 'bg-brandBlue/10 border-brandBlue/30'">
+        <div class="w-3 h-3 rounded-full shadow-[0_0_8px_#38BDF8]" :class="darkMode ? 'bg-brandNeon' : 'bg-brandBlue'"></div>
       </div>
-      <h3 class="text-lg font-bold text-white mb-2">Welcome to BrandCheck <span class="text-[#38BDF8]">Pro</span></h3>
-      <p class="text-xs text-slate-400 mb-6">Access the zero-data retention pipeline and corporate compliance dashboard.</p>
-      <button @click="authModal = false" class="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded text-xs tracking-wide transition duration-150">Continue as Guest</button>
+      <h3 class="text-lg font-bold mb-2" :class="darkMode ? 'text-white' : 'text-slate-900'">Welcome to BrandCheck <span class="text-brandNeon">Pro</span></h3>
+      <p class="text-xs mb-6" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Access the zero-data retention pipeline and corporate compliance dashboard.</p>
+      <button @click="authModal = false" class="w-full bg-brandBlue hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded text-xs tracking-wide transition duration-150">Continue as Guest</button>
     </div>
   </div>
 
-  <div x-show="connectionModal" class="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4" style="display:none;" @click.away="connectionModal = false">
-    <div class="border max-w-md w-full p-6 rounded-xl bg-[#1E293B] border-slate-700 shadow-2xl relative text-left">
-      <div class="flex justify-between items-center mb-4 border-b pb-3 border-slate-800">
-        <h3 class="text-sm font-bold text-white uppercase tracking-wider">Cloud Engine Configuration</h3>
-        <button @click="connectionModal = false" class="text-slate-400 hover:text-white text-xl leading-none">&times;</button>
+  <div x-show="connectionModal" class="fixed inset-0 z-50 flex justify-center items-center p-4" style="display:none;" @click.away="connectionModal = false"
+       :class="darkMode ? 'bg-black/80' : 'bg-slate-900/60'">
+    <div class="border max-w-md w-full p-6 rounded-xl shadow-2xl relative text-left transition-colors duration-200"
+         :class="darkMode ? 'bg-brandSurfaceDark border-slate-700' : 'bg-white border-slate-200'">
+      <div class="flex justify-between items-center mb-4 border-b pb-3" :class="darkMode ? 'border-slate-800' : 'border-slate-200'">
+        <h3 class="text-sm font-bold uppercase tracking-wider" :class="darkMode ? 'text-white' : 'text-slate-900'">Cloud Engine Configuration</h3>
+        <button @click="connectionModal = false" class="hover:text-white text-xl leading-none" :class="darkMode ? 'text-slate-400' : 'text-slate-500'">&times;</button>
       </div>
-      <p class="text-xs text-slate-400 mb-1 leading-relaxed">Paste any <strong class="text-slate-200">Google AI Studio</strong> or <strong class="text-slate-200">OpenRouter</strong> API key. BrandCheck Pro auto-detects an available model for that key.</p>
-      <p class="text-[10px] text-slate-500 mb-4">No model selection is required. Without a key, the local heuristic engine runs automatically.</p>
+      <p class="text-xs mb-1 leading-relaxed" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Paste any supported BYOK key — <strong :class="darkMode ? 'text-slate-200' : 'text-slate-800'">Google AI Studio</strong>, <strong :class="darkMode ? 'text-slate-200' : 'text-slate-800'">OpenRouter</strong>, <strong :class="darkMode ? 'text-slate-200' : 'text-slate-800'">OpenAI</strong>, or <strong :class="darkMode ? 'text-slate-200' : 'text-slate-800'">Anthropic</strong>. BrandCheck Pro auto-detects the provider and routes the request.</p>
+      <p class="text-[10px] mb-4" :class="darkMode ? 'text-slate-500' : 'text-slate-500'">Without a key, the local heuristic engine runs automatically. First-time visitors may also receive one complimentary default API call.</p>
       <div class="space-y-4">
         <div>
-          <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1.5">API Key</label>
+          <label class="block text-[10px] font-mono uppercase mb-1.5" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">API Key</label>
           <input type="password" x-model="cloudEngineKey"
-            placeholder="Paste any Google AI Studio or OpenRouter key..."
-            class="w-full p-3 text-xs border rounded-lg bg-slate-900 border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-[#38BDF8]" />
+            placeholder="Paste any Google / OpenRouter / OpenAI / Anthropic key..."
+            class="w-full p-3 text-xs border rounded-lg focus:outline-none focus:border-brandNeon"
+            :class="darkMode ? 'bg-slate-900 border-slate-800 text-white placeholder-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'" />
         </div>
         <div class="flex gap-2">
           <button @click="saveKey()"
-            class="flex-1 bg-[#38BDF8] text-slate-950 hover:bg-[#7dd3fc] font-bold py-2 px-4 rounded text-xs transition duration-150 text-center shadow-md">⚡ Save & Activate</button>
+            class="flex-1 bg-brandNeon text-slate-950 hover:bg-[#7dd3fc] font-bold py-2 px-4 rounded text-xs transition duration-150 text-center shadow-md">⚡ Save & Activate</button>
           <button @click="disconnectKey()"
-            class="px-4 py-2 rounded text-xs font-semibold border border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800 transition duration-150">Clear Key</button>
+            class="px-4 py-2 rounded text-xs font-semibold border transition duration-150" :class="darkMode ? 'border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'">Clear Key</button>
         </div>
       </div>
     </div>
@@ -606,6 +777,29 @@ Campaign Copy: ${campaignCopy}`;
       </div>
     </div>
   </div>
+
+  <div x-show="firstUseToast" x-transition class="fixed right-5 bottom-20 z-50 max-w-sm rounded-xl border border-brandNeon/30 bg-brandNeon/10 backdrop-blur px-4 py-3 shadow-2xl" style="display:none;">
+    <div class="flex items-start gap-3">
+      <span class="mt-1 w-2 h-2 rounded-full bg-brandNeon shadow-[0_0_10px_#38BDF8] animate-pulse"></span>
+      <div>
+        <p class="text-xs font-mono font-bold text-brandNeon uppercase">Complimentary First-Use API Call</p>
+        <p class="text-[11px] text-slate-100/80 mt-0.5">This analysis used the default API key. Add your own key in ⚙️ for unlimited runs.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="border-t py-8 mt-auto transition-colors duration-200" :class="darkMode ? 'bg-brandBgDark border-slate-800 text-slate-400' : 'bg-brandBgLight border-slate-200 text-slate-600'">
+    <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4 text-xs">
+      <div class="text-center md:text-left">
+        <p class="font-semibold mb-1">IIMC Origin Seed &bull; Controversy Prediction &bull; Linguistic Risk &bull; Cultural Tripwires &bull; Brand Safety AI &bull; Context-Aware Analysis &bull; Zero-Data Retention Privacy Policy</p>
+        <p>&copy; 2026 BrandCheck Pro. Volatile RAM sandbox. No inputs retained on disk.</p>
+      </div>
+      <div class="flex items-center gap-4">
+        <a href="#" @click.prevent="privacyModal = true" class="hover:text-brandNeon transition">Privacy Policy</a>
+        <a href="api-connector.html" class="hover:text-brandNeon transition">Developer Portal</a>
+      </div>
+    </div>
+  </footer>
 
   <script>
     window.addEventListener('load', () => {
@@ -707,15 +901,31 @@ Campaign Copy: ${campaignCopy}`;
         async function runComplianceCheck() {
           state.loader = true;
           state.showResults = false;
-          state.inferenceStatus = state.cloudEngineKey ? 'Live AI Pipeline Running...' : 'Local Heuristic Engine Running...';
+
+          // Key resolution (fallback Alpine path)
+          let apiKey = state.cloudEngineKey.trim();
+          let usedDefaultKey = false;
+          const signedInUser = (typeof getAuthUser === 'function') ? getAuthUser() : null;
+          if (!apiKey && DEFAULT_API_KEY && !DEFAULT_API_KEY.includes('REPLACE')) {
+            if (signedInUser) {
+              apiKey = DEFAULT_API_KEY;
+              usedDefaultKey = true;
+            } else if (!isFirstUseDefaultConsumed()) {
+              apiKey = DEFAULT_API_KEY;
+              usedDefaultKey = true;
+              markFirstUseDefaultConsumed();
+            }
+          }
+
+          state.inferenceStatus = apiKey ? 'Live AI Pipeline Running...' : 'Local Heuristic Engine Running...';
           render();
           try {
-            const data = state.cloudEngineKey
-              ? await runAPIAnalysis(state.brandContext, state.demographics, state.campaignCopy, state.sensitivity, state.cloudEngineKey)
+            const data = apiKey
+              ? await runAPIAnalysis(state.brandContext, state.demographics, state.campaignCopy, state.sensitivity, apiKey)
               : normalizeAnalysisPayload(localHeuristicEngine(state.brandContext, state.demographics, state.campaignCopy, state.sensitivity), 'Local Heuristic Engine');
             state.results = data;
-            state.engineUsed = data.engine || 'Live AI Pipeline';
-            state.inferenceStatus = state.cloudEngineKey ? 'Live AI Pipeline Connected' : 'Inference Core Ready';
+            state.engineUsed = data.engine || (apiKey ? 'Live AI Pipeline' : 'Local Heuristic Engine');
+            state.inferenceStatus = apiKey ? 'Live AI Pipeline Connected' : 'Inference Core Ready';
           } catch (err) {
             state.results = {
               overall_score: 0,
@@ -742,7 +952,7 @@ Campaign Copy: ${campaignCopy}`;
           if (!state.cloudEngineKey) return;
           localStorage.setItem('BC_LIVE_CORE_KEY', state.cloudEngineKey);
           state.inferenceStatus = 'Live AI Pipeline Connected';
-          state.engineUsed = state.cloudEngineKey.startsWith('sk-or-') ? 'Live AI Pipeline: OpenRouter BYOK' : 'Live AI Pipeline: Google AI Studio BYOK';
+          state.engineUsed = 'Live AI Pipeline: ' + providerLabel(state.cloudEngineKey);
           closeConnectionModal();
           flashConnectionToast();
           render();
