@@ -1,10 +1,12 @@
 /**
  * BrandCheck Pro — Volatile RAM Sandbox Simulation Engine
  * Routing Architecture (2026):
- *   BYOK key (any provider) → User's own API account
- *   Signed-in user         → Operator-paid default API key on every run
- *   Anonymous 1st use      → Complimentary default API key (one time)
- *   No key / 2nd+ anon     → Offline heuristic engine
+ *   BYOK key (any provider) → Direct provider API call (user's own key)
+ *   No BYOK + backend configured → Backend gateway uses operator-paid key securely
+ *   No BYOK + no backend → Offline heuristic engine
+ *
+ * The operator-paid DEFAULT_API_KEY is now stored ONLY on the backend
+ * (backend/.env). It is never exposed in front-end code.
  *
  * Supported BYOK key prefixes (auto-detected):
  *   sk-or-*              → OpenRouter
@@ -13,23 +15,21 @@
  *   sk-ant-*             → Anthropic
  *   anything else        → OpenRouter-compatible fallback
  *
- * Default key location:
- *   Set DEFAULT_API_KEY below. It is the operator-paid key used for every
- *   signed-in user and for the first free run of anonymous visitors.
+ * Backend gateway:
+ *   Set BACKEND_URL below. The backend resolves keys server-side:
+ *     • Signed-in users get the operator-paid key on every run
+ *     • Anonymous visitors get one complimentary paid run (first-use-per-IP)
  */
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CONFIGURABLE DEFAULT API KEY
-// Paste the operator-paid API key below. It will be used:
-//   • For every signed-in user on every run (unlimited operator-paid API calls)
-//   • For the very first run of an anonymous visitor (one complimentary call)
-// The key can be from ANY provider (OpenRouter, Google AI Studio, OpenAI,
-// Anthropic, or any OpenRouter-compatible service). The sandbox auto-detects
-// the provider from the key prefix.
-// Users can override this at any time by pasting their own key in the
-// Cloud Engine modal (⚙️ icon).
+// BACKEND GATEWAY CONFIGURATION
+// The default API key is now stored ONLY on the backend (backend/.env).
+// Set the URL of your deployed BrandCheck Pro backend below.
+//   Local development: "http://localhost:8000"
+//   Production:        "https://api.brandcheckpro.in"  (or wherever you host it)
+// Leave as "" if the frontend is served from the same origin as the backend.
 // ═══════════════════════════════════════════════════════════════════════════════
-const DEFAULT_API_KEY = "«redacted:sk-…»";
+const BACKEND_URL = "";
 
 // OpenRouter model used for the default pool and user-supplied OR keys.
 const OR_MODEL = "qwen/qwen-2.5-72b-instruct:free";
@@ -282,13 +282,13 @@ function runCriticalTermGuard(campaignCopy) {
   return null; // Copy is clean — safe to proceed to generic enterprise fallback
 }
 
-async function executeComplianceCheck(brandContext, demographics, campaignCopy) {
+async function executeComplianceCheck(brandContext, demographics, campaignCopy, sensitivity = 'Standard') {
   console.log("[BrandCheck Pro] Executing validation workflow...");
   console.log(`[BrandCheck Pro] Context: ${brandContext} | Demographics: ${demographics}`);
   console.log(`[BrandCheck Pro] Target Copy: "${campaignCopy}"`);
 
   // ═══════════════════════════════════════════════════════════════════════════════
-  // KEY RESOLUTION — BYOK > Signed-in paid API > First-use default API > offline heuristic
+  // KEY RESOLUTION — BYOK > Backend gateway (hides operator key) > offline heuristic
   // ═══════════════════════════════════════════════════════════════════════════════
   const byokKey =
     localStorage.getItem('BC_LIVE_CORE_KEY') ||
@@ -302,30 +302,47 @@ async function executeComplianceCheck(brandContext, demographics, campaignCopy) 
   const signedInUser = (typeof getAuthUser === 'function') ? getAuthUser() : null;
   const isSignedIn = !!signedInUser;
 
-  // Paid API eligibility:
-  // 1. BYOK always wins and overrides everything.
-  // 2. Signed-in users get the operator-paid default API key on every run.
-  // 3. Anonymous users get the default API key only for their first use (per browser).
-  // 4. Everyone else falls back to the offline heuristic engine.
-  let usedDefaultKey = false;
-  let activeKey = byokKey;
-  if (!byokKey && DEFAULT_API_KEY && !DEFAULT_API_KEY.includes('«redacted')) {
-    if (isSignedIn) {
-      activeKey = DEFAULT_API_KEY;
-      usedDefaultKey = true; // operator-paid key for authenticated users
-      console.log('[BrandCheck Pro] Signed-in user — operator-paid default API key applied.');
-    } else if (!isFirstUseDefaultConsumed()) {
-      activeKey = DEFAULT_API_KEY;
-      usedDefaultKey = true;
-      markFirstUseDefaultConsumed();
-      console.log('[BrandCheck Pro] First-use default API key applied for anonymous visitor.');
+  // If no BYOK key is provided, route through the backend gateway so the
+  // operator-paid DEFAULT_API_KEY never leaves the server.
+  if (!byokKey && BACKEND_URL) {
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (isSignedIn && signedInUser?.credential) {
+        headers['X-BrandCheck-Auth'] = signedInUser.credential;
+      }
+      const response = await fetch(`${BACKEND_URL}/v1/analyze`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ text: campaignCopy, market: demographics })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        console.log('[BrandCheck Pro] Backend gateway result:', data);
+        return postProcessAnalysis(data, campaignCopy);
+      }
+      console.warn('[BrandCheck Pro] Backend gateway returned non-OK status:', response.status);
+    } catch (err) {
+      console.warn('[BrandCheck Pro] Backend gateway unreachable:', err.message);
     }
   }
 
-  const provider = detectProvider(activeKey);
-  console.log(`[BrandCheck Pro] Provider detected: ${provider}${usedDefaultKey ? ' (default)' : ' (BYOK)'}`);
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // BYOK DIRECT ROUTES (user chose to use their own key in the ⚙️ modal)
+  // ═══════════════════════════════════════════════════════════════════════════════
+  if (!byokKey) {
+    console.log('[BrandCheck Pro] No BYOK key and no backend gateway configured. Falling back to offline heuristic engine.');
+    const offlineData = simulateOfflineAnalysis(brandContext, demographics, campaignCopy);
+    offlineData.isOfflineFallback = true;
+    return offlineData;
+  }
 
-  // ── Shared system prompt ─────────────────────────────────────────────────────
+  const activeKey = byokKey;
+  const provider = detectProvider(activeKey);
+  console.log(`[BrandCheck Pro] Provider detected: ${provider} (BYOK)`);
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Shared system prompt for direct-provider BYOK routes
+  // ═══════════════════════════════════════════════════════════════════════════════
   const systemPrompt = `You are an expert brand safety evaluation engine. Analyze the given campaign copy under the provided brand context and target demographics.
 Be extremely strict and vigilant. Check for brand safety, religious sensitivity, political neutrality, classist remarks, casteist slurs, suggestive or explicit adult framing (e.g. "nude", "sexy", "adult", or suggestive questions like "nude search kiya?"), and compliance with platform guidelines (Google Ads / Meta Policy).
 If copy is suggestive or contains sexually explicit words, you MUST drop the score below 30 and rate it High Risk.
@@ -342,7 +359,6 @@ Return ONLY a valid JSON object — no markdown fences, no commentary — with t
     }
   ]
 }`;
-
   // ═══════════════════════════════════════════════════════════════════════════════
   // Route A: Google AI Studio BYOK (AIza...)
   // ═══════════════════════════════════════════════════════════════════════════════

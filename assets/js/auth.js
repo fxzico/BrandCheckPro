@@ -62,6 +62,9 @@ window.handleGoogleAuthCallback = function(response) {
         if (response && response.credential) {
             const user = decodeJWT(response.credential);
             if (user) {
+                // Store both the decoded profile and the raw credential so the
+                // backend can verify the JWT when granting operator-paid API access.
+                user.credential = response.credential;
                 localStorage.setItem('BC_AUTH_USER', JSON.stringify(user));
                 window.dispatchEvent(new CustomEvent('gauth:login', { detail: user }));
             } else {

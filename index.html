@@ -53,16 +53,13 @@
   </script>
 
   <script>
-    // CONFIGURABLE DEFAULT API KEY
-    // Paste the operator-paid API key below. It will be used:
-    //   • For every signed-in user on every run (unlimited operator-paid API calls)
-    //   • For the very first run of an anonymous visitor (one complimentary call)
-    // The key can be from ANY provider (OpenRouter, Google AI Studio, OpenAI,
-    // Anthropic, or any OpenRouter-compatible service). The sandbox auto-detects
-    // the provider from the key prefix.
-    // Users can override this at any time by pasting their own key in the
-    // Cloud Engine modal (⚙️ icon).
-    const DEFAULT_API_KEY = "«redacted:sk-…»";
+    // BACKEND GATEWAY CONFIGURATION
+    // The operator-paid API key is now stored ONLY on the backend (backend/.env).
+    // Set your BrandCheck Pro backend URL here:
+    //   Local dev:  "http://localhost:8000"
+    //   Production: "https://api.brandcheckpro.in"  (or your backend host)
+    // Leave as "" if frontend and backend share the same origin.
+    const BACKEND_URL = "";
 
     function detectProvider(apiKey) {
       if (!apiKey || typeof apiKey !== 'string') return 'unknown';
@@ -462,21 +459,39 @@ Campaign Copy: ${campaignCopy}`;
           this.showResults = false;
 
           // Key resolution:
-          // 1. BYOK always wins.
-          // 2. Signed-in users get the operator-paid default API key on every run.
-          // 3. Anonymous users get the default API key only for their first use (per browser).
-          // 4. Everyone else falls back to the offline heuristic engine.
+          // 1. BYOK always wins → direct provider call.
+          // 2. Backend gateway configured and no BYOK → backend handles the
+          //    operator-paid key securely (signed-in users get unlimited runs;
+          //    anonymous users get one complimentary first-use run).
+          // 3. No backend and no BYOK → offline heuristic engine.
           let apiKey = this.cloudEngineKey.trim();
-          let usedDefaultKey = false;
-          const signedInUser = (typeof getAuthUser === 'function') ? getAuthUser() : null;
-          if (!apiKey && DEFAULT_API_KEY && !DEFAULT_API_KEY.includes('REPLACE')) {
-            if (signedInUser) {
-              apiKey = DEFAULT_API_KEY;
-              usedDefaultKey = true;
-            } else if (!isFirstUseDefaultConsumed()) {
-              apiKey = DEFAULT_API_KEY;
-              usedDefaultKey = true;
-              markFirstUseDefaultConsumed();
+
+          if (!apiKey && BACKEND_URL) {
+            this.inferenceStatus = 'Live AI Pipeline Running...';
+            try {
+              const headers = { 'Content-Type': 'application/json' };
+              const signedInUser = (typeof getAuthUser === 'function') ? getAuthUser() : null;
+              if (signedInUser?.credential) {
+                headers['X-BrandCheck-Auth'] = signedInUser.credential;
+              }
+              const res = await fetch(`${BACKEND_URL}/v1/analyze`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ text: this.campaignCopy, market: this.demographics })
+              });
+              if (res.ok) {
+                const data = await res.json();
+                this.results = data;
+                this.engineUsed = data.engine || 'Live AI Pipeline';
+                this.inferenceStatus = 'Live AI Pipeline Connected';
+                this.loader = false;
+                this.showResults = true;
+                return;
+              }
+              const errText = await res.text();
+              console.warn('[BrandCheck Pro] Backend gateway error:', res.status, errText);
+            } catch (err) {
+              console.warn('[BrandCheck Pro] Backend gateway unreachable:', err.message);
             }
           }
 
@@ -488,10 +503,6 @@ Campaign Copy: ${campaignCopy}`;
             this.results = data;
             this.engineUsed = data.engine || (apiKey ? 'Live AI Pipeline' : 'Local Heuristic Engine');
             this.inferenceStatus = apiKey ? 'Live AI Pipeline Connected' : 'Inference Core Ready';
-            if (usedDefaultKey) {
-              this.firstUseToast = true;
-              setTimeout(() => { this.firstUseToast = false; }, 6000);
-            }
           } catch (err) {
             console.error('Compliance analysis failed:', err);
             this.results = {
@@ -904,16 +915,33 @@ Campaign Copy: ${campaignCopy}`;
 
           // Key resolution (fallback Alpine path)
           let apiKey = state.cloudEngineKey.trim();
-          let usedDefaultKey = false;
-          const signedInUser = (typeof getAuthUser === 'function') ? getAuthUser() : null;
-          if (!apiKey && DEFAULT_API_KEY && !DEFAULT_API_KEY.includes('REPLACE')) {
-            if (signedInUser) {
-              apiKey = DEFAULT_API_KEY;
-              usedDefaultKey = true;
-            } else if (!isFirstUseDefaultConsumed()) {
-              apiKey = DEFAULT_API_KEY;
-              usedDefaultKey = true;
-              markFirstUseDefaultConsumed();
+
+          if (!apiKey && BACKEND_URL) {
+            state.inferenceStatus = 'Live AI Pipeline Running...';
+            render();
+            try {
+              const headers = { 'Content-Type': 'application/json' };
+              const signedInUser = (typeof getAuthUser === 'function') ? getAuthUser() : null;
+              if (signedInUser?.credential) {
+                headers['X-BrandCheck-Auth'] = signedInUser.credential;
+              }
+              const res = await fetch(`${BACKEND_URL}/v1/analyze`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ text: state.campaignCopy, market: state.demographics })
+              });
+              if (res.ok) {
+                const data = await res.json();
+                state.results = data;
+                state.engineUsed = data.engine || 'Live AI Pipeline';
+                state.inferenceStatus = 'Live AI Pipeline Connected';
+                state.loader = false;
+                state.showResults = true;
+                render();
+                return;
+              }
+            } catch (err) {
+              console.warn('[BrandCheck Pro] Backend gateway unreachable:', err.message);
             }
           }
 
