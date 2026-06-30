@@ -35,6 +35,9 @@ engine = BrandCheckEngine()
 class AnalysisRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=5000, description="Target marketing copy input.")
     market: Optional[str] = Field("IN-NAT", description="Target geo-cultural market code.")
+    brand_context: Optional[str] = Field("", description="Brand or product context.")
+    demographics: Optional[str] = Field("", description="Target demographic/market description.")
+    sensitivity: Optional[str] = Field("Standard", description="Sensitivity level: Low, Standard, Maximum.")
 
 class IssueDetail(BaseModel):
     phrase: str
@@ -46,6 +49,7 @@ class AnalysisResponse(BaseModel):
     risk_level: str
     summary: str
     flagged_issues: List[IssueDetail]
+    engine: Optional[str] = Field("BrandCheck Pro", description="Engine that produced the result.")
 
 class BatchAnalysisRequest(BaseModel):
     payloads: List[AnalysisRequest] = Field(..., max_length=50)
@@ -119,7 +123,14 @@ async def analyze_single_copy(payload: AnalysisRequest, request: Request):
     """Evaluates single tracking instances for pre-crisis exposure."""
     try:
         client_key = _resolve_api_key(request)
-        result = engine.analyze_copy(payload.text, payload.market, api_key=client_key)
+        result = engine.analyze_copy(
+            payload.text,
+            payload.market,
+            api_key=client_key,
+            brand_context=payload.brand_context,
+            demographics=payload.demographics,
+            sensitivity=payload.sensitivity,
+        )
         return result
     except Exception as e:
         raise HTTPException(
@@ -135,7 +146,14 @@ async def analyze_batch_copy(payload: BatchAnalysisRequest, request: Request):
     batch_results = []
     for item in payload.payloads:
         start_time = time.time()
-        analysis = engine.analyze_copy(item.text, item.market, api_key=client_key)
+        analysis = engine.analyze_copy(
+            item.text,
+            item.market,
+            api_key=client_key,
+            brand_context=item.brand_context,
+            demographics=item.demographics,
+            sensitivity=item.sensitivity,
+        )
         batch_results.append({
             "text_preview": item.text[:30] + "...",
             "analysis": analysis,

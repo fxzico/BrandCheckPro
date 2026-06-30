@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BrandCheck Pro — Enterprise Pre-Crisis Firewall</title>
-  <meta name="description" content="Enterprise Pre-Crisis Linguistic Firewall assessing copywriting against socio-cultural risk anomalies in India.">
+  <title>BrandCheck Pro — Catch Risky Copy Before It Goes Live</title>
+  <meta name="description" content="Scan your ads and marketing copy for cultural, religious, and political risks in India. Free, private, no data saved.">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
   <script>
@@ -29,10 +29,11 @@
     })();
   </script>
 
-  <!-- Central styles + auth + sandbox engine -->
+  <!-- Central styles + auth + RAG KB + sandbox engine -->
   <link rel="stylesheet" href="assets/css/custom.css">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="assets/js/auth.js"></script>
+  <script src="assets/js/rag_kb.js"></script>
   <script src="assets/js/sandbox.js"></script>
 
   <script>
@@ -54,512 +55,20 @@
   </script>
 
   <script>
-    // BACKEND GATEWAY CONFIGURATION
-    // The operator-paid API key is now stored ONLY on the backend (backend/.env).
-    // Set your BrandCheck Pro backend URL here:
-    //   Local dev:  "http://localhost:8000"
-    //   Production: "https://api.brandcheckpro.in"  (or your backend host)
-    // Leave as "" if frontend and backend share the same origin.
-    const BACKEND_URL = "";
-
-    function detectProvider(apiKey) {
-      if (!apiKey || typeof apiKey !== 'string') return 'unknown';
-      const key = apiKey.trim();
-      if (key.startsWith('sk-or-')) return 'openrouter';
-      if (key.startsWith('AIza')) return 'google';
-      if (key.startsWith('sk-ant-')) return 'anthropic';
-      if (key.startsWith('sk-proj-') || key.startsWith('sk-') || key.startsWith('sk_live_') || key.startsWith('sk_test_')) return 'openai';
-      return 'unknown';
-    }
-
-    function providerLabel(apiKey) {
-      const map = {
-        openrouter: 'OpenRouter BYOK',
-        google: 'Google AI Studio BYOK',
-        openai: 'OpenAI BYOK',
-        anthropic: 'Anthropic BYOK',
-        unknown: 'Custom BYOK'
-      };
-      return map[detectProvider(apiKey)] || 'Live AI Pipeline';
-    }
-
-    function isFirstUseDefaultConsumed() {
-      return localStorage.getItem('BC_FIRST_USE_DEFAULT_CONSUMED') === '1';
-    }
-
-    function markFirstUseDefaultConsumed() {
-      localStorage.setItem('BC_FIRST_USE_DEFAULT_CONSUMED', '1');
-    }
-
-    // LOCAL HEURISTIC COMPLIANCE ENGINE
-    function localHeuristicEngine(brandContext, demographics, campaignCopy, sensitivity) {
-      const text = (brandContext + ' ' + campaignCopy).toLowerCase();
-      const flagged = [];
-      let deductions = 0;
-      const sensitivityMultiplier = sensitivity === 'Maximum' ? 1.4 : sensitivity === 'Low' ? 0.6 : 1.0;
-
-      const rules = [
-        { kw: 'sacred', cat: 'Religious Sensitivity', reason: 'Mixing sacred/religious terminology with commercial messaging risks backlash from devout demographics.', score: 18 },
-        { kw: 'divine', cat: 'Religious Sensitivity', reason: 'Using divine imagery for commercial gain can offend religious sentiments across multiple faiths in India.', score: 15 },
-        { kw: 'blessing', cat: 'Religious Sensitivity', reason: 'Commodifying spiritual concepts may alienate conservative religious consumer bases.', score: 12 },
-        { kw: 'holy', cat: 'Religious Sensitivity', reason: 'Juxtaposing holy/religious framing with commercial offers invites PR risk.', score: 18 },
-        { kw: 'temple', cat: 'Religious Sensitivity', reason: 'References to religious sites in commercial copy risk offending devotees.', score: 14 },
-        { kw: 'mandir', cat: 'Religious Sensitivity', reason: 'Direct temple references in marketing collateral carry significant religious sensitivity risk in Indian markets.', score: 20 },
-        { kw: 'jihad', cat: 'Religious Sensitivity', reason: 'Highly charged religious/political term with extreme polarisation potential.', score: 40 },
-        { kw: 'kafir', cat: 'Religious Sensitivity', reason: 'Religiously derogatory slur — severe PR and legal exposure.', score: 50 },
-        { kw: 'nationalist', cat: 'Political Neutrality', reason: 'Brand alignment with political ideology risks alienating opposing political segments.', score: 22 },
-        { kw: 'freedom', cat: 'Political Neutrality', reason: '"Freedom" used in commercial contexts can carry political dog-whistle connotations in polarised India.', score: 10 },
-        { kw: 'revolution', cat: 'Political Neutrality', reason: 'Revolutionary language can be read as politically provocative by conservative audiences.', score: 14 },
-        { kw: 'protest', cat: 'Political Neutrality', reason: 'Associating a brand with protest imagery carries political risk in India\'s regulatory environment.', score: 18 },
-        { kw: 'cheap', cat: 'Gender & Social Tone', reason: '"Cheap" combined with demographic framing can carry classist or exploitative brand connotations.', score: 15 },
-        { kw: 'maid', cat: 'Gender & Social Tone', reason: 'Referencing domestic help roles in promotional contexts can reinforce classist social hierarchies.', score: 20 },
-        { kw: 'housewife', cat: 'Gender & Social Tone', reason: 'Stereotyping gender roles in marketing is a known risk trigger for modern urban demographics.', score: 18 },
-        { kw: 'fair skin', cat: 'Gender & Social Tone', reason: 'Colorist language is a documented PR crisis vector in India.', score: 35 },
-        { kw: 'fairness', cat: 'Gender & Social Tone', reason: 'Skin-tone-linked fairness claims carry legal and reputational risk post-2020 ASCI guidelines.', score: 28 },
-        { kw: 'whitening', cat: 'Gender & Social Tone', reason: 'Explicit skin-whitening claims are banned under ASCI/DTCP regulatory framework.', score: 40 },
-        { kw: 'bang', cat: 'Sarcasm & Double Meaning', reason: '"Bang" has regional double-entendre connotations that can be contextually misread.', score: 15 },
-        { kw: 'naked', cat: 'Sarcasm & Double Meaning', reason: 'Sexually suggestive language risks content restriction or public complaints.', score: 25 },
-        { kw: 'hard', cat: 'Sarcasm & Double Meaning', reason: '"Hard" without clear context can carry unintended sexual double-meaning in Hindi-influenced semantics.', score: 10 },
-        { kw: 'lower caste', cat: 'Caste & Community Risk', reason: 'Direct caste-referencing in commercial messaging is legally sensitive under SC/ST Act provisions.', score: 50 },
-        { kw: 'dalit', cat: 'Caste & Community Risk', reason: 'Using community identity terms commercially without authority or context is exploitative and legally risky.', score: 45 },
-        { kw: 'brahmin', cat: 'Caste & Community Risk', reason: 'Caste identity references in brand messaging polarise audiences and attract regulatory attention.', score: 40 },
-        { kw: 'fuck', cat: 'Profanity & Offensive Language', reason: 'Explicit profanity is completely unacceptable in commercial copy and guarantees severe PR damage.', score: 80 },
-        { kw: 'shit', cat: 'Profanity & Offensive Language', reason: 'Profane language damages brand safety and violates advertising standards.', score: 50 },
-        { kw: 'bitch', cat: 'Profanity & Offensive Language', reason: 'Derogatory slurs violate social tone policies and brand safety guidelines.', score: 70 },
-        { kw: 'asshole', cat: 'Profanity & Offensive Language', reason: 'Offensive insults are strictly prohibited in public campaign copy.', score: 60 },
-        { kw: 'cunt', cat: 'Profanity & Offensive Language', reason: 'Extreme profanity will result in immediate platform bans and severe backlash.', score: 90 },
-        { kw: 'bastard', cat: 'Profanity & Offensive Language', reason: 'Offensive insults are strictly prohibited in public campaign copy.', score: 60 },
-      ];
-
-      for (const rule of rules) {
-        if (text.includes(rule.kw)) {
-          flagged.push({ phrase: rule.kw, category: rule.cat, rationale: rule.reason });
-          deductions += Math.round(rule.score * sensitivityMultiplier);
-        }
-      }
-
-      const finalScore = Math.max(100 - deductions, 10);
-      const riskLevel = finalScore >= 85 ? 'Safe' : finalScore >= 65 ? 'Caution' : finalScore >= 40 ? 'High Risk' : 'Critical';
-      let summary = '';
-      if (finalScore >= 85) {
-        summary = 'The campaign copy and brand context pass baseline socio-cultural risk screening. No critical violations detected. Monitor for edge-case regional sensitivities before launch.';
-      } else if (finalScore >= 65) {
-        summary = flagged.length + ' caution-level risk signal(s) detected. The flagged phrases may cause misinterpretation across specific Indian demographics. Refine highlighted elements before going live.';
-      } else if (finalScore >= 40) {
-        summary = flagged.length + ' high-risk linguistic pattern(s) identified. The copy contains phrases with documented PR crisis potential in the Indian market. Immediate revision is strongly advised.';
-      } else {
-        summary = flagged.length + ' critical violation(s) detected. This copy contains language that poses severe legal, religious, or social harm risk in the Indian cultural context. Do NOT publish without complete revision and legal review.';
-      }
-      return { overall_score: finalScore, risk_level: riskLevel, summary, flagged_issues: flagged, engine: 'local' };
-    }
-
-    function normalizeAnalysisPayload(data, engineLabel) {
-      const issues = Array.isArray(data.flagged_issues) ? data.flagged_issues : [];
-      return {
-        overall_score: Number.isFinite(Number(data.overall_score)) ? Math.max(0, Math.min(100, Math.round(Number(data.overall_score)))) : 0,
-        risk_level: data.risk_level || 'API Error',
-        summary: data.summary || 'The analysis engine returned an empty threat evaluation.',
-        flagged_issues: issues.map((issue, index) => ({
-          id: `${engineLabel}-${index}-${issue.phrase || issue.category || 'issue'}`,
-          phrase: issue.phrase || issue.message || 'Contextual anomaly',
-          category: issue.category || 'Contextual Risk',
-          rationale: issue.rationale || issue.message || 'The engine flagged this item for review.'
-        })),
-        engine: engineLabel
-      };
-    }
-
-    function extractJsonPayload(rawText) {
-      const clean = String(rawText || '').replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-      try {
-        return JSON.parse(clean);
-      } catch (_) {
-        const match = clean.match(/\{[\s\S]*\}/);
-        if (!match) throw new Error('The AI response did not contain valid JSON.');
-        return JSON.parse(match[0]);
-      }
-    }
-
-    async function readErrorMessage(response) {
-      const text = await response.text();
-      try {
-        return JSON.parse(text).error?.message || text;
-      } catch (_) {
-        return text;
-      }
-    }
-
-    async function resolveGoogleModel(apiKey) {
-      const preferred = [
-        'gemini-2.5-flash',
-        'gemini-2.5-pro',
-        'gemini-2.0-flash',
-        'gemini-2.0-flash-lite',
-        'gemini-1.5-flash',
-        'gemini-1.5-pro'
-      ];
-
-      try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`);
-        if (res.ok) {
-          const payload = await res.json();
-          const candidates = (payload.models || [])
-            .filter((model) => (model.supportedGenerationMethods || []).includes('generateContent'))
-            .map((model) => String(model.name || '').replace(/^models\//, ''));
-
-          const preferredHit = preferred.find((name) => candidates.includes(name));
-          if (preferredHit) return preferredHit;
-          if (candidates.length) return candidates[0];
-        }
-      } catch (err) {
-        console.warn('Google model discovery failed, using fallback list:', err);
-      }
-
-      return preferred[0];
-    }
-
-    async function callGoogleModel(apiKey, model, prompt) {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: 'application/json', temperature: 0.2 }
-        })
-      });
-      if (!res.ok) {
-        throw new Error(await readErrorMessage(res));
-      }
-      const payload = await res.json();
-      return payload.candidates?.[0]?.content?.parts?.[0]?.text;
-    }
-
-    async function runGoogleAnalysis(apiKey, prompt) {
-      const discoveredModel = await resolveGoogleModel(apiKey);
-      const fallbackModels = [
-        discoveredModel,
-        'gemini-2.5-flash',
-        'gemini-2.5-pro',
-        'gemini-2.0-flash',
-        'gemini-2.0-flash-lite',
-        'gemini-1.5-flash',
-        'gemini-1.5-pro'
-      ].filter((model, index, all) => model && all.indexOf(model) === index);
-
-      const errors = [];
-      for (const model of fallbackModels) {
-        try {
-          const rawText = await callGoogleModel(apiKey, model, prompt);
-          const data = normalizeAnalysisPayload(extractJsonPayload(rawText), `Live AI Pipeline: Google AI Studio (${model})`);
-          return data;
-        } catch (err) {
-          errors.push(`${model}: ${err.message}`);
-          if (!/not found|not supported|permission|quota|api key/i.test(err.message)) break;
-        }
-      }
-
-      throw new Error(`Google AI Studio could not find an available text model for this key. Last error: ${errors.slice(-1)[0] || 'Unknown error'}`);
-    }
-
-    async function callOpenRouterModel(apiKey, model, prompt) {
-      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-          'HTTP-Referer': window.location.origin,
-          'X-Title': 'BrandCheck Pro'
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: 'system', content: 'Return only strict JSON. No markdown.' },
-            { role: 'user', content: prompt }
-          ],
-          temperature: 0.2
-        })
-      });
-      if (!res.ok) {
-        throw new Error(await readErrorMessage(res));
-      }
-      const payload = await res.json();
-      return payload.choices?.[0]?.message?.content;
-    }
-
-    async function runOpenRouterAnalysis(apiKey, prompt) {
-      const fallbackModels = [
-        'openrouter/auto',
-        'google/gemini-flash-1.5',
-        'qwen/qwen-2.5-72b-instruct:free',
-        'meta-llama/llama-3.1-8b-instruct:free',
-        'mistralai/mistral-7b-instruct:free'
-      ];
-
-      const errors = [];
-      for (const model of fallbackModels) {
-        try {
-          const rawText = await callOpenRouterModel(apiKey, model, prompt);
-          return normalizeAnalysisPayload(extractJsonPayload(rawText), `Live AI Pipeline: OpenRouter (${model})`);
-        } catch (err) {
-          errors.push(`${model}: ${err.message}`);
-          if (/invalid api key|unauthorized|authentication/i.test(err.message)) break;
-        }
-      }
-
-      throw new Error(`OpenRouter could not route this key to an available model. Last error: ${errors.slice(-1)[0] || 'Unknown error'}`);
-    }
-
-    async function runAPIAnalysis(brandContext, demographics, campaignCopy, sensitivity, apiKey) {
-      const prompt = `You are BrandCheck Pro, an enterprise linguistic compliance sandbox for Indian markets.
-Analyze the campaign with strict socio-cultural, religious, political, caste, gender, class, profanity, and regional double-meaning sensitivity.
-Return only valid JSON with this schema:
-{
-  "overall_score": <integer 0-100>,
-  "risk_level": "<Safe | Caution | High Risk | Critical>",
-  "summary": "<board-ready threat evaluation>",
-  "flagged_issues": [
-    { "phrase": "<exact trigger>", "category": "<risk category>", "rationale": "<specific Indian market risk rationale>" }
-  ]
-}
-
-Brand/Product Context: ${brandContext}
-Target Market: ${demographics}
-Risk Sensitivity: ${sensitivity}
-Campaign Copy: ${campaignCopy}`;
-
-      const provider = detectProvider(apiKey);
-      if (provider === 'openrouter' || provider === 'unknown') {
-        const result = await runOpenRouterAnalysis(apiKey, prompt);
-        result.engine = provider === 'openrouter' ? 'Live AI Pipeline: OpenRouter BYOK' : 'Live AI Pipeline: OpenRouter-compatible';
-        return result;
-      }
-      if (provider === 'openai') {
-        return runOpenAIAnalysis(apiKey, prompt);
-      }
-      if (provider === 'anthropic') {
-        return runAnthropicAnalysis(apiKey, prompt);
-      }
-      return runGoogleAnalysis(apiKey, prompt);
-    }
-
-    async function runOpenAIAnalysis(apiKey, prompt) {
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: 'Return only strict JSON. No markdown.' },
-            { role: 'user', content: prompt }
-          ],
-          response_format: { type: 'json_object' },
-          temperature: 0.2
-        })
-      });
-      if (!res.ok) {
-        const err = await readErrorMessage(res);
-        throw new Error(`OpenAI: ${err}`);
-      }
-      const payload = await res.json();
-      const rawText = payload.choices?.[0]?.message?.content;
-      const data = normalizeAnalysisPayload(extractJsonPayload(rawText), 'Live AI Pipeline: OpenAI BYOK');
-      return data;
-    }
-
-    async function runAnthropicAnalysis(apiKey, prompt) {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'x-api-key': apiKey, 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({
-          model: 'claude-3-5-haiku-20241022',
-          max_tokens: 1024,
-          system: 'Return only strict JSON. No markdown.',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.2
-        })
-      });
-      if (!res.ok) {
-        const err = await readErrorMessage(res);
-        throw new Error(`Anthropic: ${err}`);
-      }
-      const payload = await res.json();
-      const rawText = payload.content?.[0]?.text;
-      const data = normalizeAnalysisPayload(extractJsonPayload(rawText), 'Live AI Pipeline: Anthropic BYOK');
-      return data;
-    }
+    // PRODUCTION GATEWAY OVERRIDES
+    // Values in sandbox.js are defaults. Override them here for your deployed stack
+    // without touching the shared engine file.
+    // BACKEND_URL = "";  // e.g. "https://api.brandcheckpro.in" or "/api"
+    // SUPABASE_EDGE_FUNCTION = "";  // e.g. "https://<project>.supabase.co/functions/v1/analyze"
+    // SUPABASE_ANON_KEY = "";       // public anon key only; API secrets stay server-side
   </script>
 </head>
 <body class="transition-colors duration-200 font-sans antialiased min-h-screen flex flex-col"
       :class="darkMode ? 'dark bg-brandBgDark text-slate-100' : 'bg-brandBgLight text-slate-800'"
-      x-data="{ 
-        darkMode: localStorage.getItem('theme') ? (localStorage.getItem('theme') === 'dark') : window.matchMedia('(prefers-color-scheme: dark)').matches, 
-        privacyModal: false, 
-        connectionModal: false, 
-        connectionToast: false,
-        firstUseToast: false,
-        authModal: false, 
-        premiumGateModal: false, 
-        wizardStep: 1, 
-        brandContext: '', 
-        demographics: 'Whole India Market',
-        campaignCopy: '', 
-        selectedEngine: 'tier1', 
-        sensitivity: 'Standard', 
-        brandContextWarning: false, 
-        user: null,
-        userDropdown: false,
-        cloudEngineKey: '',
-        showResults: false,
-        loader: false,
-        faqOpen: null,
-        inferenceStatus: 'Inference Core Ready',
-        engineUsed: 'Local Heuristic Engine',
-        sarcasmFilterEnabled: false,
-        results: { overall_score: 100, risk_level: 'Safe', summary: 'System operational.', flagged_issues: [] },
-        init() {
-          // Auto-load existing key on page load to light up the UI immediately
-          this.cloudEngineKey = localStorage.getItem('BC_LIVE_CORE_KEY') || '';
-          if (this.cloudEngineKey) {
-            this.inferenceStatus = 'Live AI Pipeline Connected';
-            this.engineUsed = providerLabel(this.cloudEngineKey);
-          }
-          // Check for existing auth user
-          const existingUser = typeof getAuthUser === 'function' ? getAuthUser() : null;
-          if (existingUser) {
-            this.user = existingUser;
-          }
-          // Listen for auth events
-          window.addEventListener('gauth:login', (e) => {
-            this.user = e.detail;
-            this.authModal = false;
-          });
-          window.addEventListener('gauth:logout', () => {
-            this.user = null;
-            this.userDropdown = false;
-          });
-        },
-        signOut() {
-          if (typeof signOutUser === 'function') {
-            signOutUser();
-          } else {
-            this.user = null;
-            this.userDropdown = false;
-            window.dispatchEvent(new CustomEvent('gauth:logout'));
-          }
-        },
-        saveKey() {
-          const cleanKey = this.cloudEngineKey.trim();
-          if (cleanKey !== '') {
-            this.cloudEngineKey = cleanKey;
-            localStorage.setItem('BC_LIVE_CORE_KEY', cleanKey);
-            this.inferenceStatus = 'Live AI Pipeline Connected';
-            this.engineUsed = 'Live AI Pipeline: ' + providerLabel(cleanKey);
-            this.connectionModal = false;
-            this.connectionToast = true;
-            setTimeout(() => { this.connectionToast = false; }, 2600);
-          }
-        },
-        disconnectKey() {
-          localStorage.removeItem('BC_LIVE_CORE_KEY');
-          this.cloudEngineKey = '';
-          this.inferenceStatus = 'Inference Core Ready';
-          this.engineUsed = 'Local Heuristic Engine';
-          this.connectionModal = false;
-        },
-        tryToggleSarcasm() { this.premiumGateModal = true }, 
-        nextStep() { if(!this.brandContext) { this.brandContextWarning = true; return; } this.brandContextWarning = false; this.wizardStep++; }, 
-        async runComplianceCheck() { 
-          if (!this.campaignCopy.trim()) {
-            this.results = {
-              overall_score: 0,
-              risk_level: 'API Error',
-              summary: 'Campaign copy is required before running the compliance sandbox.',
-              flagged_issues: []
-            };
-            this.engineUsed = 'Validation Guard';
-            this.showResults = true;
-            return;
-          }
-          this.loader = true; 
-          this.showResults = false;
-
-          // Key resolution:
-          // 1. BYOK always wins → direct provider call.
-          // 2. Backend gateway configured and no BYOK → backend handles the
-          //    operator-paid key securely (signed-in users get unlimited runs;
-          //    anonymous users get one complimentary first-use run).
-          // 3. No backend and no BYOK → offline heuristic engine.
-          let apiKey = this.cloudEngineKey.trim();
-
-          if (!apiKey && BACKEND_URL) {
-            this.inferenceStatus = 'Live AI Pipeline Running...';
-            try {
-              const headers = { 'Content-Type': 'application/json' };
-              const signedInUser = (typeof getAuthUser === 'function') ? getAuthUser() : null;
-              if (signedInUser?.credential) {
-                headers['X-BrandCheck-Auth'] = signedInUser.credential;
-              }
-              const res = await fetch(`${BACKEND_URL}/v1/analyze`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({ text: this.campaignCopy, market: this.demographics })
-              });
-              if (res.ok) {
-                const data = await res.json();
-                this.results = data;
-                this.engineUsed = data.engine || 'Live AI Pipeline';
-                this.inferenceStatus = 'Live AI Pipeline Connected';
-                this.loader = false;
-                this.showResults = true;
-                return;
-              }
-              const errText = await res.text();
-              console.warn('[BrandCheck Pro] Backend gateway error:', res.status, errText);
-            } catch (err) {
-              console.warn('[BrandCheck Pro] Backend gateway unreachable:', err.message);
-            }
-          }
-
-          this.inferenceStatus = apiKey ? 'Live AI Pipeline Running...' : 'Local Heuristic Engine Running...';
-          try {
-            const data = apiKey
-              ? await runAPIAnalysis(this.brandContext, this.demographics, this.campaignCopy, this.sensitivity, apiKey)
-              : normalizeAnalysisPayload(localHeuristicEngine(this.brandContext, this.demographics, this.campaignCopy, this.sensitivity), 'Local Heuristic Engine');
-            this.results = data;
-            this.engineUsed = data.engine || (apiKey ? 'Live AI Pipeline' : 'Local Heuristic Engine');
-            this.inferenceStatus = apiKey ? 'Live AI Pipeline Connected' : 'Inference Core Ready';
-          } catch (err) {
-            console.error('Compliance analysis failed:', err);
-            this.results = {
-              overall_score: 0,
-              risk_level: 'API Error',
-              summary: `Live AI connection failed: ${err.message}. Check the key, provider quota, and browser network access, then run again.`,
-              flagged_issues: []
-            };
-            this.engineUsed = 'Live AI Pipeline Error';
-            this.inferenceStatus = 'Live AI Pipeline Error';
-          } finally {
-            this.loader = false;
-            this.showResults = true;
-          }
-        },
-        riskColor(level) {
-          if ((level || '').includes('Safe')) return 'text-emerald-400 border-emerald-500';
-          if (level === 'Caution') return 'text-amber-400 border-amber-500';
-          if (level === 'High Risk') return 'text-orange-400 border-orange-500';
-          if (level === 'API Error') return 'text-rose-400 border-rose-500';
-          return 'text-rose-400 border-rose-500';
-        },
-        riskBg(level) {
-          if ((level || '').includes('Safe')) return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
-          if (level === 'Caution') return 'bg-amber-500/10 text-amber-400 border-amber-500/30';
-          if (level === 'High Risk') return 'bg-orange-500/10 text-orange-400 border-orange-500/30';
-          return 'bg-rose-500/10 text-rose-400 border-rose-500/30';
-        }
-      }">
+      x-data="brandCheckApp()">
 
   <div class="bg-brandBlue text-white text-center py-2 px-4 text-xs font-semibold tracking-wide border-b border-blue-700/50 h-10 flex items-center justify-center">
-    🔒 AGENCY SECURITY ACTIVE: Zero-Data Retention Pipeline enabled. Input payloads are processed in volatile RAM.
+    Your copy is scanned privately. Nothing is saved.
   </div>
 
   <nav class="border-b px-6 py-4 sticky top-0 z-40 transition-colors duration-200"
@@ -584,7 +93,7 @@ Campaign Copy: ${campaignCopy}`;
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
           LIVE AI PIPELINE
         </span>
-        <button @click="connectionModal = true" class="p-2 rounded-lg border transition duration-150" :class="darkMode ? 'border-slate-800 bg-slate-900/50 hover:bg-slate-800 text-slate-400 hover:text-brandNeon' : 'border-slate-300 bg-white/50 hover:bg-slate-100 text-slate-600 hover:text-brandNeon'" title="Cloud Configuration">⚙️</button>
+        <button @click="connectionModal = true" class="p-2 rounded-lg border transition duration-150" :class="darkMode ? 'border-slate-800 bg-slate-900/50 hover:bg-slate-800 text-slate-400 hover:text-brandNeon' : 'border-slate-300 bg-white/50 hover:bg-slate-100 text-slate-600 hover:text-brandNeon'" title="AI settings">&#x2699;&#xFE0F;</button>
         <button @click="darkMode = !darkMode; localStorage.setItem('theme', darkMode ? 'dark' : 'light'); if (darkMode) { document.documentElement.classList.add('dark'); } else { document.documentElement.classList.remove('dark'); }" class="p-2 rounded-lg border transition duration-150" :class="darkMode ? 'border-slate-800 bg-slate-900/50 hover:bg-slate-800' : 'border-slate-300 bg-white/50 hover:bg-slate-100'">
           <span x-show="darkMode" class="text-amber-400">☀️</span>
           <span x-show="!darkMode" class="text-slate-600">🌙</span>
@@ -615,40 +124,84 @@ Campaign Copy: ${campaignCopy}`;
           </div>
         </div>
 
-        <a href="pricing.html" class="bg-brandBlue hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-md text-xs transition duration-150 shadow-md">Enterprise Access</a>
+        <a href="#scanner" class="bg-brandBlue hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-md text-xs transition duration-150 shadow-md">Try Free</a>
       </div>
     </div>
   </nav>
 
-  <main class="max-w-6xl mx-auto py-14 px-6 flex-grow">
-    <div class="mb-10 text-left">
-      <span class="text-xs font-bold tracking-widest text-brandNeon uppercase bg-brandNeon/10 px-3 py-1 rounded-full border border-brandNeon/20">Product Workspace Dashboard</span>
-      <h1 class="text-4xl font-extrabold tracking-tight mt-4" :class="darkMode ? 'text-white' : 'text-slate-900'">Linguistic Compliance Sandbox</h1>
-      <p class="text-sm mt-2 max-w-xl" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Stress-test your marketing copy against socio-cultural, religious, and political risk anomalies across Indian markets.</p>
-    </div>
+  <main class="max-w-6xl mx-auto py-12 px-6 flex-grow">
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-[560px]">
+    <!-- Hero -->
+    <section class="text-center py-16 lg:py-24">
+      <h1 class="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight" :class="darkMode ? 'text-white' : 'text-slate-900'">
+        One wrong word can tank your brand.<br class="hidden md:block" />
+        Catch it <span class="text-brandNeon">before</span> it goes live.
+      </h1>
+      <p class="mt-6 text-base md:text-lg max-w-2xl mx-auto" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">
+        BrandCheck Pro scans your ads, taglines, and social copy for cultural, religious, and political risks in the Indian market — in seconds.
+      </p>
+      <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+        <a href="#scanner" class="bg-brandBlue hover:bg-blue-700 text-white font-bold px-8 py-3 rounded-lg text-sm transition shadow-lg">
+          Scan Your Copy Free
+        </a>
+        <a href="#how-it-works" class="px-8 py-3 rounded-lg text-sm font-semibold border transition" :class="darkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'">
+          See How It Works
+        </a>
+      </div>
+      <p class="mt-4 text-xs" :class="darkMode ? 'text-slate-500' : 'text-slate-500'">No signup. No data saved. Your copy stays private.</p>
+    </section>
+
+    <!-- How It Works -->
+    <section id="how-it-works" class="py-12 border-t" :class="darkMode ? 'border-slate-800' : 'border-slate-200'">
+      <h2 class="text-center text-2xl font-bold mb-10" :class="darkMode ? 'text-white' : 'text-slate-900'">How it works</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="p-6 rounded-xl border text-center" :class="darkMode ? 'bg-brandSurfaceDark/40 border-slate-800' : 'bg-white border-slate-200'">
+          <div class="w-10 h-10 rounded-full bg-brandNeon/10 text-brandNeon flex items-center justify-center mx-auto mb-4 text-sm font-bold">1</div>
+          <h3 class="font-bold mb-2" :class="darkMode ? 'text-white' : 'text-slate-900'">Paste your copy</h3>
+          <p class="text-sm" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Drop in your ad, slogan, or social post and tell us what you’re selling.</p>
+        </div>
+        <div class="p-6 rounded-xl border text-center" :class="darkMode ? 'bg-brandSurfaceDark/40 border-slate-800' : 'bg-white border-slate-200'">
+          <div class="w-10 h-10 rounded-full bg-brandNeon/10 text-brandNeon flex items-center justify-center mx-auto mb-4 text-sm font-bold">2</div>
+          <h3 class="font-bold mb-2" :class="darkMode ? 'text-white' : 'text-slate-900'">Choose your audience</h3>
+          <p class="text-sm" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Pick the market tier and sensitivity level that matches your campaign.</p>
+        </div>
+        <div class="p-6 rounded-xl border text-center" :class="darkMode ? 'bg-brandSurfaceDark/40 border-slate-800' : 'bg-white border-slate-200'">
+          <div class="w-10 h-10 rounded-full bg-brandNeon/10 text-brandNeon flex items-center justify-center mx-auto mb-4 text-sm font-bold">3</div>
+          <h3 class="font-bold mb-2" :class="darkMode ? 'text-white' : 'text-slate-900'">Get your risk score</h3>
+          <p class="text-sm" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">See exactly which words or themes could spark backlash — and why.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scanner -->
+    <section id="scanner" class="py-12">
+      <div class="mb-8 text-center">
+        <h2 class="text-2xl font-bold" :class="darkMode ? 'text-white' : 'text-slate-900'">Try the BrandCheck Scanner</h2>
+        <p class="text-sm mt-2 max-w-xl mx-auto" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Paste your campaign copy below and see what risks we catch.</p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-[560px]">
 
       <!-- INPUT PANEL -->
       <section class="lg:col-span-5 rounded-xl p-6 flex flex-col justify-between border glass-card"
                :class="darkMode ? 'bg-brandSurfaceDark/40 border-slate-800' : 'bg-white border-slate-200'">
         <div>
           <div class="flex items-center justify-between border-b pb-4 mb-6" :class="darkMode ? 'border-slate-800' : 'border-slate-200'">
-            <h2 class="text-sm font-mono font-bold tracking-wider text-brandNeon">INPUT CONFIGURATION</h2>
-            <span class="text-xs font-mono text-slate-500" x-text="`Step ${wizardStep} of 3`">Step 1 of 3</span>
+            <h2 class="text-sm font-bold tracking-wide text-brandNeon">Your Copy</h2>
+            <span class="text-xs text-slate-500" x-text="`Step ${wizardStep} of 3`">Step 1 of 3</span>
           </div>
 
           <div x-show="wizardStep === 1" class="space-y-4">
-            <label class="block text-xs font-mono font-bold uppercase" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Brand / Product Context</label>
+            <label class="block text-xs font-bold" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">What are you selling?</label>
             <textarea x-model="brandContext" @input="brandContextWarning = false"
-              placeholder="e.g., A premium consumer beverage campaign promoting a summer festive discount for urban millennial audiences..."
-              class="w-full h-36 p-3 text-xs border rounded-lg focus:outline-none focus:border-brandNeon resize-none"
+              placeholder="e.g., A premium soft drink for young adults during Diwali..."
+              class="w-full h-36 p-3 text-sm border rounded-lg focus:outline-none focus:border-brandNeon resize-none"
               :class="darkMode ? 'bg-brandSurfaceDark border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'"></textarea>
             <div x-show="brandContextWarning" class="text-xs text-rose-400 font-semibold bg-rose-500/10 border border-rose-500/20 rounded p-2.5" style="display:none;">
-              ⚠ Brand context is required to continue.
+              Tell us what you’re selling to continue.
             </div>
             <div class="space-y-2">
-              <label class="block text-xs font-mono font-bold uppercase" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Risk Sensitivity Level</label>
+              <label class="block text-xs font-bold" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">How strict?</label>
               <div class="flex gap-2">
                 <template x-for="lvl in ['Low', 'Standard', 'Maximum']">
                   <button @click="sensitivity = lvl" type="button"
@@ -661,43 +214,43 @@ Campaign Copy: ${campaignCopy}`;
           </div>
 
           <div x-show="wizardStep === 2" class="space-y-4" style="display:none;">
-            <label class="block text-xs font-mono font-bold uppercase" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Target Market</label>
-            <select x-model="demographics" class="w-full p-3 text-xs border rounded-lg focus:outline-none focus:border-brandNeon"
+            <label class="block text-xs font-bold" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Who is this for?</label>
+            <select x-model="demographics" class="w-full p-3 text-sm border rounded-lg focus:outline-none focus:border-brandNeon"
                     :class="darkMode ? 'bg-brandSurfaceDark border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'">
-              <option value="Whole India Market">Whole India Market</option>
-              <option value="Tier 1 Market">Tier 1 Market (Metro Cities)</option>
-              <option value="Tier 2 Market">Tier 2 Market (Urban Non-Metro)</option>
-              <option value="Tier 3 Market and Beyond">Tier 3 Market and Beyond</option>
+              <option value="Whole India Market">All of India</option>
+              <option value="Tier 1 Market">Metro cities</option>
+              <option value="Tier 2 Market">Urban non-metro</option>
+              <option value="Tier 3 Market and Beyond">Small towns & rural</option>
             </select>
-            <label class="block text-xs font-mono font-bold uppercase mt-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Inference Engine</label>
-            <select x-model="selectedEngine" class="w-full p-3 text-xs border rounded-lg focus:outline-none focus:border-brandNeon"
+            <label class="block text-xs font-bold mt-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Analysis mode</label>
+            <select x-model="selectedEngine" class="w-full p-3 text-sm border rounded-lg focus:outline-none focus:border-brandNeon"
                     :class="darkMode ? 'bg-brandSurfaceDark border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'">
-              <option value="tier1">High-Priority Engine (Recommended)</option>
-              <option value="standard">Standard Contextual Core</option>
-              <option value="advanced">Multi-Pass Advanced Reasoning</option>
+              <option value="tier1">Smart scan (recommended)</option>
+              <option value="standard">Standard scan</option>
+              <option value="advanced">Deep scan</option>
             </select>
           </div>
 
           <div x-show="wizardStep === 3" class="space-y-4" style="display:none;">
-            <label class="block text-xs font-mono font-bold uppercase" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Campaign Slogan / Copy</label>
+            <label class="block text-xs font-bold" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Your ad or slogan</label>
             <textarea x-model="campaignCopy"
-              placeholder="Type your marketing slogan, tagline, or social media caption here..."
-              class="w-full h-36 p-3 text-xs border rounded-lg focus:outline-none focus:border-brandNeon resize-none"
+              placeholder="Type your tagline, caption, or ad script here..."
+              class="w-full h-36 p-3 text-sm border rounded-lg focus:outline-none focus:border-brandNeon resize-none"
               :class="darkMode ? 'bg-brandSurfaceDark border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'"></textarea>
-            <p class="text-[10px]" :class="darkMode ? 'text-slate-500' : 'text-slate-500'">Analysis will evaluate both the brand context and this copy together.</p>
+            <p class="text-[11px]" :class="darkMode ? 'text-slate-500' : 'text-slate-500'">We check this against your product context and audience.</p>
           </div>
         </div>
 
         <div class="flex items-center gap-3 mt-8 pt-4 border-t" :class="darkMode ? 'border-slate-800' : 'border-slate-200'">
           <button x-show="wizardStep > 1" @click="wizardStep--" type="button"
-            class="px-4 py-2 rounded text-xs font-semibold border transition duration-150" :class="darkMode ? 'border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'" style="display:none;">← Back</button>
+            class="px-4 py-2 rounded text-xs font-semibold border transition duration-150" :class="darkMode ? 'border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'" style="display:none;">Back</button>
           <button x-show="wizardStep < 3" @click="nextStep()" type="button"
-            class="flex-1 bg-brandBlue text-white py-2 rounded text-xs font-bold hover:bg-blue-700 transition text-center shadow-lg">Next Step →</button>
+            class="flex-1 bg-brandBlue text-white py-2 rounded text-xs font-bold hover:bg-blue-700 transition text-center shadow-lg">Continue</button>
           <button x-show="wizardStep === 3" @click="runComplianceCheck()" type="button"
             class="flex-1 bg-brandNeon text-slate-950 py-2 rounded text-xs font-extrabold hover:bg-[#7dd3fc] transition text-center shadow-lg" style="display:none;"
             :disabled="loader" :class="loader ? 'opacity-60 cursor-not-allowed' : ''">
-            <span x-show="!loader">▶ RUN COMPLIANCE CHECK</span>
-            <span x-show="loader" style="display:none;">⏳ Scanning...</span>
+            <span x-show="!loader">Scan for Risks</span>
+            <span x-show="loader" style="display:none;">Scanning...</span>
           </button>
         </div>
       </section>
@@ -706,30 +259,30 @@ Campaign Copy: ${campaignCopy}`;
       <section class="lg:col-span-7 rounded-xl p-6 flex flex-col border glass-card min-h-[400px]"
                :class="darkMode ? 'bg-brandSurfaceDark/40 border-slate-800' : 'bg-white border-slate-200'">
         <div class="flex items-center justify-between border-b pb-4 mb-6" :class="darkMode ? 'border-slate-800' : 'border-slate-200'">
-          <h2 class="text-sm font-mono font-bold tracking-wider text-brandNeon">COMPLIANCE ANALYSIS OUTPUT</h2>
-          <span class="text-[10px] font-mono text-slate-400" x-text="inferenceStatus">Inference Core Ready</span>
+          <h2 class="text-sm font-bold tracking-wide text-brandNeon">Results</h2>
+          <span class="text-xs text-slate-400" x-text="inferenceStatus">Ready</span>
         </div>
 
         <div x-show="!loader && !showResults" class="flex flex-col flex-1 items-center justify-center py-16 text-center">
           <div class="w-14 h-14 rounded-full border flex items-center justify-center mb-4"
                :class="darkMode ? 'border-slate-700 bg-slate-900/60' : 'border-slate-300 bg-slate-100'">
-            <span class="text-2xl">🛡️</span>
+            <span class="text-2xl">&#x1F6E1;</span>
           </div>
-          <h3 class="text-xs font-mono font-bold uppercase" :class="darkMode ? 'text-slate-400' : 'text-slate-500'">Awaiting Execution</h3>
-          <p class="text-[11px] mt-1" :class="darkMode ? 'text-slate-500' : 'text-slate-500'">Complete the 3-step wizard and run compliance check.</p>
+          <h3 class="text-xs font-bold uppercase" :class="darkMode ? 'text-slate-400' : 'text-slate-500'">Ready to scan</h3>
+          <p class="text-[11px] mt-1" :class="darkMode ? 'text-slate-500' : 'text-slate-500'">Fill in your copy and hit Scan.</p>
           <button
-            @click="brandContext='Holiday promotional advertisement campaigns for family-owned stores during the festive season'; demographics='Tier 1 Market'; campaignCopy='Our sacred festive sale brings you cheap deals on modern home assets! Bang-for-your-buck value guaranteed.'; sensitivity='Standard'; wizardStep=3; runComplianceCheck()"
+            @click="brandContext='Festive sale for a home appliances store'; demographics='Tier 1 Market'; campaignCopy='Our sacred festive sale brings you cheap deals on modern home assets! Bang-for-your-buck value guaranteed.'; sensitivity='Standard'; wizardStep=3; runComplianceCheck()"
             type="button"
-            class="mt-6 text-[11px] font-mono hover:underline cursor-pointer border px-3 py-1.5 rounded transition"
+            class="mt-6 text-[11px] hover:underline cursor-pointer border px-3 py-1.5 rounded transition"
             :class="darkMode ? 'text-brandNeon border-brandNeon/20 bg-brandNeon/5' : 'text-brandBlue border-brandBlue/20 bg-brandBlue/5'">
-            ⚡ Load Demo Risk Payload & Run
+            Try a risky example
           </button>
         </div>
 
         <div x-show="loader" class="flex flex-col flex-1 items-center justify-center py-16 text-center" style="display:none;">
           <div class="w-10 h-10 rounded-full border-2 border-slate-700 border-t-brandNeon animate-spin mb-5"></div>
-          <p class="text-xs font-mono" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Scanning linguistic risk matrices...</p>
-          <p class="text-[10px] mt-1" :class="darkMode ? 'text-slate-500' : 'text-slate-500'" x-text="'Analysing: ' + demographics + ' context layer'"></p>
+          <p class="text-xs" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Checking your copy...</p>
+          <p class="text-[10px] mt-1" :class="darkMode ? 'text-slate-500' : 'text-slate-500'" x-text="'Audience: ' + demographics"></p>
         </div>
 
         <div x-show="showResults && !loader" class="space-y-5 flex-1" style="display:none;">
@@ -742,18 +295,18 @@ Campaign Copy: ${campaignCopy}`;
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 mb-2 flex-wrap">
-                <span class="text-xs font-mono font-bold" :class="darkMode ? 'text-slate-200' : 'text-slate-700'">Risk Assessment:</span>
+                <span class="text-xs font-bold" :class="darkMode ? 'text-slate-200' : 'text-slate-700'">Risk level:</span>
                 <span class="text-xs font-bold px-2 py-0.5 rounded border" :class="riskBg(results.risk_level)" x-text="results.risk_level">Safe</span>
               </div>
               <p class="text-[11px] leading-relaxed" :class="darkMode ? 'text-slate-300' : 'text-slate-700'" x-text="results.summary"></p>
-              <p class="text-[10px] mt-1.5 font-mono" :class="darkMode ? 'text-slate-500' : 'text-slate-500'" x-text="'Engine: ' + engineUsed"></p>
+              <p class="text-[10px] mt-1.5" :class="darkMode ? 'text-slate-500' : 'text-slate-500'" x-text="'Mode: ' + engineUsed"></p>
             </div>
           </div>
 
           <!-- Flagged Risk Signals Section -->
           <div class="mt-6" x-show="showResults && !loader">
-            <h3 class="text-xs font-mono font-bold uppercase mb-3" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">
-              FLAGGED RISK SIGNALS (<span x-text="results.flagged_issues ? results.flagged_issues.length : 0">0</span>)
+            <h3 class="text-xs font-bold uppercase mb-3" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">
+              Flagged issues (<span x-text="results.flagged_issues ? results.flagged_issues.length : 0">0</span>)
             </h3>
             <div class="space-y-3">
               <template x-for="issue in (results.flagged_issues || [])" :key="issue.id || issue.phrase">
@@ -775,35 +328,36 @@ Campaign Copy: ${campaignCopy}`;
           <div x-show="results.flagged_issues && results.flagged_issues.length === 0">
             <div class="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
               <span class="text-emerald-400 text-lg">✓</span>
-              <p class="text-xs" :class="darkMode ? 'text-emerald-300' : 'text-emerald-700'">No individual linguistic risk signals detected. Copy clears baseline screening.</p>
+              <p class="text-xs" :class="darkMode ? 'text-emerald-300' : 'text-emerald-700'">No issues found. Your copy looks clear.</p>
             </div>
           </div>
 
           <div class="pt-3 border-t flex justify-between items-center" :class="darkMode ? 'border-slate-800' : 'border-slate-200'">
-            <button @click="showResults = false; wizardStep = 1; inferenceStatus = 'Inference Core Ready'" type="button"
-              class="text-[11px] font-mono transition" :class="darkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-800'">← New Analysis</button>
+            <button @click="showResults = false; wizardStep = 1; inferenceStatus = 'Ready'" type="button"
+              class="text-[11px] transition" :class="darkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-800'">New scan</button>
             <button @click="runComplianceCheck()" type="button"
-              class="text-[11px] font-mono hover:underline text-brandNeon">↻ Re-run Check</button>
+              class="text-[11px] hover:underline text-brandNeon">Scan again</button>
           </div>
         </div>
       </section>
     </div>
+    </section>
   </main>
 
   <!-- Privacy Policy Modal Window Overlay -->
   <div x-show="privacyModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4" style="display:none;" @click.away="privacyModal = false">
     <div class="border max-w-lg w-full p-6 rounded-lg shadow-2xl relative" :class="darkMode ? 'bg-brandSurfaceDark border-slate-800' : 'bg-white border-slate-200'">
       <div class="flex justify-between items-center mb-4 border-b pb-3" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
-        <h3 class="text-lg font-bold">Privacy Policy & Ephemeral RAM Pipeline</h3>
+        <h3 class="text-lg font-bold">Privacy Policy</h3>
         <button @click="privacyModal = false" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
       </div>
       <div class="text-xs space-y-4 max-h-[60vh] overflow-y-auto pr-2" :class="darkMode ? 'text-slate-300' : 'text-slate-600'">
-        <p><strong>1. Volatile RAM Processing:</strong> All campaign slogans, marketing briefs, and copywriting inputs uploaded to the sandbox or Chrome Extension are parsed strictly in-memory (volatile RAM). No files, text logs, or cache indexes are generated or saved to physical drives.</p>
-        <p><strong>2. Immediate Memory Purge:</strong> The moment the API response payload is compiled and returned to the client request, the active execution thread is terminated, and the corresponding memory addresses are immediately cleared and garbage collected.</p>
-        <p><strong>3. Zero-Log Infrastructure:</strong> The system maintains no analytical databases, telemetry registers, or training pipelines. Your proprietary brand secrets and IP remain entirely isolated and secure from future leakage vectors.</p>
+        <p><strong>1. Your copy never touches a hard drive.</strong> Everything you paste is processed in memory (RAM) only. We don’t save files, logs, or backups.</p>
+        <p><strong>2. Memory is wiped after every scan.</strong> Once you get your result, the data is cleared from memory.</p>
+        <p><strong>3. No tracking or training.</strong> We don’t store analytics, build user profiles, or use your content to train AI models.</p>
       </div>
       <button @click="privacyModal = false" class="w-full mt-6 bg-brandBlue text-white font-bold py-2 rounded text-xs tracking-wide hover:opacity-90 transition">
-        Understood & Acknowledged
+        Got it
       </button>
     </div>
   </div>
@@ -818,7 +372,7 @@ Campaign Copy: ${campaignCopy}`;
         <img src="assets/images/logo-dark-mode.svg" alt="BrandCheck Pro Logo" class="h-10 w-auto" :class="darkMode ? 'block' : 'hidden'" />
       </div>
       <h3 class="text-lg font-bold mb-2" :class="darkMode ? 'text-white' : 'text-slate-900'">Welcome to BrandCheck <span class="text-brandNeon">Pro</span></h3>
-      <p class="text-xs mb-6" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Access the zero-data retention pipeline and corporate compliance dashboard.</p>
+      <p class="text-xs mb-6" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Sign in to save your scan history and unlock team features.</p>
       
       <!-- GIS Button Container with required parameters -->
       <div class="w-full flex flex-col items-center py-5 bg-slate-900/40 rounded-xl border border-slate-800/40 mb-6">
@@ -838,7 +392,7 @@ Campaign Copy: ${campaignCopy}`;
       </div>
       
       <p class="text-[10px] text-slate-500 leading-relaxed max-w-xs mx-auto">
-        By continuing, you authorize temporary session validation. All campaign auditing is processed ephemerally in memory according to our SLA privacy guidelines.
+        By signing in, you agree to our privacy-first terms. We never store your marketing copy.
       </p>
     </div>
   </div>
@@ -848,22 +402,22 @@ Campaign Copy: ${campaignCopy}`;
     <div class="border max-w-md w-full p-6 rounded-xl shadow-2xl relative text-left transition-colors duration-200"
          :class="darkMode ? 'bg-brandSurfaceDark border-slate-700' : 'bg-white border-slate-200'">
       <div class="flex justify-between items-center mb-4 border-b pb-3" :class="darkMode ? 'border-slate-800' : 'border-slate-200'">
-        <h3 class="text-sm font-bold uppercase tracking-wider" :class="darkMode ? 'text-white' : 'text-slate-900'">Cloud Engine Configuration</h3>
+        <h3 class="text-sm font-bold uppercase tracking-wider" :class="darkMode ? 'text-white' : 'text-slate-900'">Connect Your AI Key</h3>
         <button @click="connectionModal = false" class="hover:text-white text-xl leading-none" :class="darkMode ? 'text-slate-400' : 'text-slate-500'">&times;</button>
       </div>
-      <p class="text-xs mb-1 leading-relaxed" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Paste any supported BYOK key — <strong :class="darkMode ? 'text-slate-200' : 'text-slate-800'">Google AI Studio</strong>, <strong :class="darkMode ? 'text-slate-200' : 'text-slate-800'">OpenRouter</strong>, <strong :class="darkMode ? 'text-slate-200' : 'text-slate-800'">OpenAI</strong>, or <strong :class="darkMode ? 'text-slate-200' : 'text-slate-800'">Anthropic</strong>. BrandCheck Pro auto-detects the provider and routes the request.</p>
-      <p class="text-[10px] mb-4" :class="darkMode ? 'text-slate-500' : 'text-slate-500'">Without a key, the local heuristic engine runs automatically. First-time visitors may also receive one complimentary default API call.</p>
+      <p class="text-xs mb-1 leading-relaxed" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Paste your own API key from <strong :class="darkMode ? 'text-slate-200' : 'text-slate-800'">Google AI Studio</strong>, <strong :class="darkMode ? 'text-slate-200' : 'text-slate-800'">OpenRouter</strong>, <strong :class="darkMode ? 'text-slate-200' : 'text-slate-800'">OpenAI</strong>, or <strong :class="darkMode ? 'text-slate-200' : 'text-slate-800'">Anthropic</strong>. We auto-detect the provider and route your scan.</p>
+      <p class="text-[10px] mb-4" :class="darkMode ? 'text-slate-500' : 'text-slate-500'">No key? The built-in scanner runs automatically. New visitors also get one free AI-powered scan.</p>
       <div class="space-y-4">
         <div>
-          <label class="block text-[10px] font-mono uppercase mb-1.5" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">API Key</label>
+          <label class="block text-[10px] uppercase mb-1.5" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">API Key</label>
           <input type="password" x-model="cloudEngineKey"
-            placeholder="Paste any Google / OpenRouter / OpenAI / Anthropic key..."
+            placeholder="Paste your key here..."
             class="w-full p-3 text-xs border rounded-lg focus:outline-none focus:border-brandNeon"
             :class="darkMode ? 'bg-slate-900 border-slate-800 text-white placeholder-slate-600' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'" />
         </div>
         <div class="flex gap-2">
           <button @click="saveKey()"
-            class="flex-1 bg-brandNeon text-slate-950 hover:bg-[#7dd3fc] font-bold py-2 px-4 rounded text-xs transition duration-150 text-center shadow-md">⚡ Save & Activate</button>
+            class="flex-1 bg-brandNeon text-slate-950 hover:bg-[#7dd3fc] font-bold py-2 px-4 rounded text-xs transition duration-150 text-center shadow-md">Save & Activate</button>
           <button @click="disconnectKey()"
             class="px-4 py-2 rounded text-xs font-semibold border transition duration-150" :class="darkMode ? 'border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'">Clear Key</button>
         </div>
@@ -875,8 +429,8 @@ Campaign Copy: ${campaignCopy}`;
     <div class="flex items-start gap-3">
       <span class="mt-1 w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_#34D399] animate-pulse"></span>
       <div>
-        <p class="text-xs font-mono font-bold text-emerald-300 uppercase">Live AI Pipeline Connected</p>
-        <p class="text-[11px] text-emerald-100/80 mt-0.5">Your key is saved locally and the next compliance check will use the live engine.</p>
+        <p class="text-xs font-bold text-emerald-300 uppercase">AI key connected</p>
+        <p class="text-[11px] text-emerald-100/80 mt-0.5">Your key is saved locally. Next scan uses the AI engine.</p>
       </div>
     </div>
   </div>
@@ -885,8 +439,8 @@ Campaign Copy: ${campaignCopy}`;
     <div class="flex items-start gap-3">
       <span class="mt-1 w-2 h-2 rounded-full bg-brandNeon shadow-[0_0_10px_#38BDF8] animate-pulse"></span>
       <div>
-        <p class="text-xs font-mono font-bold text-brandNeon uppercase">Complimentary First-Use API Call</p>
-        <p class="text-[11px] text-slate-100/80 mt-0.5">This analysis used the default API key. Add your own key in ⚙️ for unlimited runs.</p>
+        <p class="text-xs font-bold text-brandNeon uppercase">Free scan used</p>
+        <p class="text-[11px] text-slate-100/80 mt-0.5">This scan used our complimentary AI call. Add your key for unlimited scans.</p>
       </div>
     </div>
   </div>
@@ -894,12 +448,12 @@ Campaign Copy: ${campaignCopy}`;
   <footer class="border-t py-8 mt-auto transition-colors duration-200" :class="darkMode ? 'bg-brandBgDark border-slate-800 text-slate-400' : 'bg-brandBgLight border-slate-200 text-slate-600'">
     <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4 text-xs">
       <div class="text-center md:text-left">
-        <p class="font-semibold mb-1">IIMC Origin Seed &bull; Controversy Prediction &bull; Linguistic Risk &bull; Cultural Tripwires &bull; Brand Safety AI &bull; Context-Aware Analysis &bull; Zero-Data Retention Privacy Policy</p>
-        <p>&copy; 2026 BrandCheck Pro. Volatile RAM sandbox. No inputs retained on disk.</p>
+        <p class="font-semibold mb-1">BrandCheck Pro — catch risky copy before it goes live.</p>
+        <p>&copy; 2026 BrandCheck Pro. No copy is saved or stored.</p>
       </div>
       <div class="flex items-center gap-4">
-        <a href="#" @click.prevent="privacyModal = true" class="hover:text-brandNeon transition">Privacy Policy</a>
-        <a href="api-connector.html" class="hover:text-brandNeon transition">Developer Portal</a>
+        <a href="#" @click.prevent="privacyModal = true" class="hover:text-brandNeon transition">Privacy</a>
+        <a href="api-connector.html" class="hover:text-brandNeon transition">Developers</a>
       </div>
     </div>
   </footer>
@@ -919,8 +473,8 @@ Campaign Copy: ${campaignCopy}`;
           cloudEngineKey: localStorage.getItem('BC_LIVE_CORE_KEY') || '',
           loader: false,
           showResults: false,
-          inferenceStatus: localStorage.getItem('BC_LIVE_CORE_KEY') ? 'Live AI Pipeline Connected' : 'Inference Core Ready',
-          engineUsed: localStorage.getItem('BC_LIVE_CORE_KEY') ? 'Live AI Pipeline' : 'Local Heuristic Engine',
+          inferenceStatus: localStorage.getItem('BC_LIVE_CORE_KEY') ? 'AI connected' : 'Ready',
+          engineUsed: localStorage.getItem('BC_LIVE_CORE_KEY') ? 'AI scan' : 'Built-in scan',
           results: { overall_score: 100, risk_level: 'Safe', summary: 'System operational.', flagged_issues: [] }
         };
 
@@ -946,11 +500,11 @@ Campaign Copy: ${campaignCopy}`;
         const keyInput = q('input[x-model="cloudEngineKey"]');
         const stepLabel = q('[x-text="`Step ${wizardStep} of 3`"]');
         const statusLabel = q('[x-text="inferenceStatus"]');
-        const loaderMarket = q('[x-text="\'Analysing: \' + demographics + \' context layer\'"]');
+        const loaderMarket = q('[x-text="\'Audience: \' + demographics"]');
         const scoreText = q('[x-text="results.overall_score"]');
         const riskText = q('[x-text="results.risk_level"]');
         const summaryText = q('[x-text="results.summary"]');
-        const engineText = q('[x-text="\'Engine: \' + engineUsed"]');
+        const engineText = q('[x-text="\'Mode: \' + engineUsed"]');
         const issueCount = q('[x-text="results.flagged_issues ? results.flagged_issues.length : 0"]');
         const issuesWrap = q('.mt-6 .space-y-3');
         const cleanBlock = q('[x-show="results.flagged_issues && results.flagged_issues.length === 0"]');
@@ -974,17 +528,17 @@ Campaign Copy: ${campaignCopy}`;
           show(liveBadge, state.cloudEngineKey !== '', 'inline-flex');
           if (stepLabel) stepLabel.textContent = `Step ${state.wizardStep} of 3`;
           if (statusLabel) statusLabel.textContent = state.inferenceStatus;
-          if (loaderMarket) loaderMarket.textContent = `Analysing: ${state.demographics} context layer`;
+          if (loaderMarket) loaderMarket.textContent = `Audience: ${state.demographics}`;
           if (scoreText) scoreText.textContent = state.results.overall_score;
           if (riskText) riskText.textContent = state.results.risk_level;
           if (summaryText) summaryText.textContent = state.results.summary;
-          if (engineText) engineText.textContent = `Engine: ${state.engineUsed}`;
+          if (engineText) engineText.textContent = `Mode: ${state.engineUsed}`;
           if (issueCount) issueCount.textContent = state.results.flagged_issues.length;
           renderIssues();
           show(cleanBlock, state.showResults && state.results.flagged_issues.length === 0);
           show(byButtonText('Back'), state.wizardStep > 1);
-          show(byButtonText('Next Step'), state.wizardStep < 3, 'block');
-          show(byButtonText('RUN COMPLIANCE CHECK'), state.wizardStep === 3, 'block');
+          show(byButtonText('Continue'), state.wizardStep < 3, 'block');
+          show(byButtonText('Scan for Risks'), state.wizardStep === 3, 'block');
         }
 
         function openConnectionModal() {
@@ -1009,7 +563,7 @@ Campaign Copy: ${campaignCopy}`;
           let apiKey = state.cloudEngineKey.trim();
 
           if (!apiKey && BACKEND_URL) {
-            state.inferenceStatus = 'Live AI Pipeline Running...';
+            state.inferenceStatus = 'AI scan running...';
             render();
             try {
               const headers = { 'Content-Type': 'application/json' };
@@ -1025,8 +579,8 @@ Campaign Copy: ${campaignCopy}`;
               if (res.ok) {
                 const data = await res.json();
                 state.results = data;
-                state.engineUsed = data.engine || 'Live AI Pipeline';
-                state.inferenceStatus = 'Live AI Pipeline Connected';
+                state.engineUsed = data.engine || 'AI scan';
+                state.inferenceStatus = 'AI connected';
                 state.loader = false;
                 state.showResults = true;
                 render();
@@ -1037,24 +591,24 @@ Campaign Copy: ${campaignCopy}`;
             }
           }
 
-          state.inferenceStatus = apiKey ? 'Live AI Pipeline Running...' : 'Local Heuristic Engine Running...';
+          state.inferenceStatus = apiKey ? 'AI scan running...' : 'Built-in scan running...';
           render();
           try {
             const data = apiKey
               ? await runAPIAnalysis(state.brandContext, state.demographics, state.campaignCopy, state.sensitivity, apiKey)
-              : normalizeAnalysisPayload(localHeuristicEngine(state.brandContext, state.demographics, state.campaignCopy, state.sensitivity), 'Local Heuristic Engine');
+              : normalizeAnalysisPayload(localHeuristicEngine(state.brandContext, state.demographics, state.campaignCopy, state.sensitivity), 'Built-in scan');
             state.results = data;
-            state.engineUsed = data.engine || (apiKey ? 'Live AI Pipeline' : 'Local Heuristic Engine');
-            state.inferenceStatus = apiKey ? 'Live AI Pipeline Connected' : 'Inference Core Ready';
+            state.engineUsed = data.engine || (apiKey ? 'AI scan' : 'Built-in scan');
+            state.inferenceStatus = apiKey ? 'AI connected' : 'Ready';
           } catch (err) {
             state.results = {
               overall_score: 0,
               risk_level: 'API Error',
-              summary: `Live AI connection failed: ${err.message}. Check the key, provider quota, and browser network access, then run again.`,
+              summary: `AI connection failed: ${err.message}. Check your key, provider quota, and network, then try again.`,
               flagged_issues: []
             };
-            state.engineUsed = 'Live AI Pipeline Error';
-            state.inferenceStatus = 'Live AI Pipeline Error';
+            state.engineUsed = 'AI scan error';
+            state.inferenceStatus = 'AI scan error';
           }
           state.loader = false;
           state.showResults = true;
@@ -1066,13 +620,13 @@ Campaign Copy: ${campaignCopy}`;
         marketSelect?.addEventListener('change', (event) => { state.demographics = event.target.value; });
         engineSelect?.addEventListener('change', (event) => { state.selectedEngine = event.target.value; });
         keyInput?.addEventListener('input', (event) => { state.cloudEngineKey = event.target.value; });
-        qa('button[title="Cloud Configuration"]').forEach((button) => button.addEventListener('click', openConnectionModal));
+        qa('button[title="AI settings"]').forEach((button) => button.addEventListener('click', openConnectionModal));
         byButtonText('Save & Activate')?.addEventListener('click', () => {
           state.cloudEngineKey = (keyInput?.value || '').trim();
           if (!state.cloudEngineKey) return;
           localStorage.setItem('BC_LIVE_CORE_KEY', state.cloudEngineKey);
-          state.inferenceStatus = 'Live AI Pipeline Connected';
-          state.engineUsed = 'Live AI Pipeline: ' + providerLabel(state.cloudEngineKey);
+          state.inferenceStatus = 'AI connected';
+          state.engineUsed = 'AI scan: ' + providerLabel(state.cloudEngineKey);
           closeConnectionModal();
           flashConnectionToast();
           render();
@@ -1081,12 +635,12 @@ Campaign Copy: ${campaignCopy}`;
           localStorage.removeItem('BC_LIVE_CORE_KEY');
           state.cloudEngineKey = '';
           if (keyInput) keyInput.value = '';
-          state.inferenceStatus = 'Inference Core Ready';
-          state.engineUsed = 'Local Heuristic Engine';
+          state.inferenceStatus = 'Ready';
+          state.engineUsed = 'Built-in scan';
           closeConnectionModal();
           render();
         });
-        byButtonText('Next Step')?.addEventListener('click', () => {
+        byButtonText('Continue')?.addEventListener('click', () => {
           if (state.wizardStep === 1 && !state.brandContext.trim()) return;
           state.wizardStep = Math.min(3, state.wizardStep + 1);
           render();
@@ -1095,16 +649,16 @@ Campaign Copy: ${campaignCopy}`;
           state.wizardStep = Math.max(1, state.wizardStep - 1);
           render();
         });
-        byButtonText('RUN COMPLIANCE CHECK')?.addEventListener('click', runComplianceCheck);
-        byButtonText('Re-run Check')?.addEventListener('click', runComplianceCheck);
-        byButtonText('New Analysis')?.addEventListener('click', () => {
+        byButtonText('Scan for Risks')?.addEventListener('click', runComplianceCheck);
+        byButtonText('Scan again')?.addEventListener('click', runComplianceCheck);
+        byButtonText('New scan')?.addEventListener('click', () => {
           state.showResults = false;
           state.wizardStep = 1;
-          state.inferenceStatus = state.cloudEngineKey ? 'Live AI Pipeline Connected' : 'Inference Core Ready';
+          state.inferenceStatus = state.cloudEngineKey ? 'AI connected' : 'Ready';
           render();
         });
-        byButtonText('Load Demo Risk Payload')?.addEventListener('click', () => {
-          state.brandContext = 'Holiday promotional advertisement campaigns for family-owned stores during the festive season';
+        byButtonText('Try a risky example')?.addEventListener('click', () => {
+          state.brandContext = 'Festive sale for a home appliances store';
           state.demographics = 'Tier 1 Market';
           state.campaignCopy = 'Our sacred festive sale brings you cheap deals on modern home assets! Bang-for-your-buck value guaranteed.';
           state.sensitivity = 'Standard';
