@@ -31,6 +31,7 @@
 
   <!-- Central styles + auth + sandbox engine -->
   <link rel="stylesheet" href="assets/css/custom.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="assets/js/auth.js"></script>
   <script src="assets/js/sandbox.js"></script>
 
@@ -737,6 +738,24 @@ Campaign Copy: ${campaignCopy}`;
     </div>
   </main>
 
+  <!-- Privacy Policy Modal Window Overlay -->
+  <div x-show="privacyModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4" style="display:none;" @click.away="privacyModal = false">
+    <div class="border max-w-lg w-full p-6 rounded-lg shadow-2xl relative" :class="darkMode ? 'bg-brandSurfaceDark border-slate-800' : 'bg-white border-slate-200'">
+      <div class="flex justify-between items-center mb-4 border-b pb-3" :class="darkMode ? 'border-slate-800' : 'border-slate-100'">
+        <h3 class="text-lg font-bold">Privacy Policy & Ephemeral RAM Pipeline</h3>
+        <button @click="privacyModal = false" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+      </div>
+      <div class="text-xs space-y-4 max-h-[60vh] overflow-y-auto pr-2" :class="darkMode ? 'text-slate-300' : 'text-slate-600'">
+        <p><strong>1. Volatile RAM Processing:</strong> All campaign slogans, marketing briefs, and copywriting inputs uploaded to the sandbox or Chrome Extension are parsed strictly in-memory (volatile RAM). No files, text logs, or cache indexes are generated or saved to physical drives.</p>
+        <p><strong>2. Immediate Memory Purge:</strong> The moment the API response payload is compiled and returned to the client request, the active execution thread is terminated, and the corresponding memory addresses are immediately cleared and garbage collected.</p>
+        <p><strong>3. Zero-Log Infrastructure:</strong> The system maintains no analytical databases, telemetry registers, or training pipelines. Your proprietary brand secrets and IP remain entirely isolated and secure from future leakage vectors.</p>
+      </div>
+      <button @click="privacyModal = false" class="w-full mt-6 bg-brandBlue text-white font-bold py-2 rounded text-xs tracking-wide hover:opacity-90 transition">
+        Understood & Acknowledged
+      </button>
+    </div>
+  </div>
+
   <div x-show="authModal" class="fixed inset-0 z-50 flex justify-center items-center p-4" style="display:none;" @click.away="authModal = false"
        :class="darkMode ? 'bg-black/80' : 'bg-slate-900/60'">
     <div class="border max-w-sm w-full p-8 rounded-xl shadow-2xl relative text-center transition-colors duration-200"
@@ -747,7 +766,27 @@ Campaign Copy: ${campaignCopy}`;
       </div>
       <h3 class="text-lg font-bold mb-2" :class="darkMode ? 'text-white' : 'text-slate-900'">Welcome to BrandCheck <span class="text-brandNeon">Pro</span></h3>
       <p class="text-xs mb-6" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Access the zero-data retention pipeline and corporate compliance dashboard.</p>
-      <button @click="authModal = false" class="w-full bg-brandBlue hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded text-xs tracking-wide transition duration-150">Continue as Guest</button>
+      
+      <!-- GIS Button Container with required parameters -->
+      <div class="w-full flex flex-col items-center py-5 bg-slate-900/40 rounded-xl border border-slate-800/40 mb-6">
+        <div id="g_id_onload"
+             data-client_id="1064735319019-9rvf3a587ih09fp5310c3fhnjibe8cp7.apps.googleusercontent.com"
+             data-callback="handleGoogleAuthCallback"
+             data-auto_prompt="false">
+        </div>
+        <div class="g_id_signin"
+             data-type="standard"
+             data-shape="rectangular"
+             data-theme="filled_black"
+             data-text="signin_with"
+             data-size="large"
+             data-logo_alignment="left">
+        </div>
+      </div>
+      
+      <p class="text-[10px] text-slate-500 leading-relaxed max-w-xs mx-auto">
+        By continuing, you authorize temporary session validation. All campaign auditing is processed ephemerally in memory according to our SLA privacy guidelines.
+      </p>
     </div>
   </div>
 
