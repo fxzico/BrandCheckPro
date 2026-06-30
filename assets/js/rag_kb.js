@@ -1,0 +1,308 @@
+// BrandCheck Pro — Blog-derived RAG Knowledge Base (Frontend)
+// Sources: /blog/* case-study posts. No PII or API keys.
+// Usage: loaded before sandbox.js; read-only pattern store for offline fallback.
+
+(function (root) {
+  'use strict';
+
+  const RAG_KB = {
+    version: '1.0.0',
+    lastUpdated: '2026-06-30',
+    markets: {
+      'IN-NAT': 'All-India national balance layer. Apply standard multi-religious, multi-lingual risk profiles.',
+      'IN-HN': 'Hindi-belt metropolitan markets. Heighten scrutiny for Urdu/Persian terminology used around Hindu festivals; casteist slurs; Hindu nationalist dog-whistles.',
+      'IN-SO': 'Southern peninsular consumer base. Heighten scrutiny for Hindi imposition, regional-language insensitivity, South-Indian stereotyping, Dravidian identity triggers.',
+      'IN-NE': 'Northeast Indian markets. Heighten scrutiny for racial/ethnic stereotyping, mainland-India centrism, separatist/tribal sensitivity.',
+      'GCC-CR': 'MENA crossover demographics. Heighten scrutiny for Islamic dietary codes, religious imagery, cross-border geopolitical references.'
+    },
+
+    caseStudies: [
+      {
+        id: 'fabindia-jashn-e-riwaaz',
+        brand: 'FabIndia',
+        year: 2021,
+        score: 85,
+        riskLevel: 'High Risk',
+        primaryCategory: 'Linguistic / Religious Identity',
+        triggers: ['jashn-e-riwaaz', 'jashn', 'riwaaz', 'urdu diwali', 'persian diwali', 'urdu imposition', 'hindi vs urdu'],
+        contexts: ['diwali', 'holi', 'navratri', 'dussehra', 'raksha bandhan'],
+        lesson: 'Using Urdu/Persian terminology to market Hindu festivals triggers linguistic-politics backlash and #Boycott calls in the current Indian climate.',
+        rationaleTemplate: 'The phrase "{phrase}" evokes the FabIndia Jashn-e-Riwaaz controversy, where an Urdu/Persian tagline for Diwali was read as cultural erasure and "Urdu imposition". In {market}, this can reactivate identity-based boycott campaigns.'
+      },
+      {
+        id: 'tanishq-ekatvam',
+        brand: 'Tanishq',
+        year: 2020,
+        score: 92,
+        riskLevel: 'Critical',
+        primaryCategory: 'Inter-faith / Religious Polarization',
+        triggers: ['ekatvam', 'inter-faith', 'interfaith', 'hindu-muslim', 'muslim-hindu', 'love jihad', 'godh bharai', 'baby shower', 'unity', 'oneness'],
+        contexts: ['diwali', 'wedding', 'jewelry', 'family', 'pregnancy'],
+        lesson: 'Inter-faith depictions, especially Hindu-Muslim family narratives, are explosively polarized in election-season or post-communal-tension climates.',
+        rationaleTemplate: 'The term "{phrase}" recalls the Tanishq Ekatvam controversy, where an inter-faith baby-shower ad was attacked under the "love jihad" narrative and withdrawn within 24 hours amid safety threats.'
+      },
+      {
+        id: 'zomato-kachra',
+        brand: 'Zomato',
+        year: 2023,
+        score: 88,
+        riskLevel: 'High Risk',
+        primaryCategory: 'Disability / Caste / Stigmatized Language',
+        triggers: ['kachra', 'trash', 'garbage', 'recycling person', 'lagaan', 'dwarfism', 'disabled', 'dalit', 'untouchable', 'manual scavenging'],
+        contexts: ['recycling', 'waste', 'food delivery', 'environment'],
+        lesson: 'Associating people — especially marginalized or disabled individuals — with words like "kachra" (trash) reinforces ableist and casteist stereotypes.',
+        rationaleTemplate: 'The word "{phrase}" mirrors the Zomato Kachra controversy, where a recycling campaign using a disabled actor/character named Kachra was condemned as ableist and caste-insensitive.'
+      },
+      {
+        id: 'layers-shot-ban',
+        brand: "Layer's Shot",
+        year: 2023,
+        score: 95,
+        riskLevel: 'Critical',
+        primaryCategory: 'ASCI / Indecent & Criminal Imagery',
+        triggers: ['gang', 'gangs', 'gangster', 'mafia', 'indecent', 'vulgar', 'shot', 'edgy perfume', 'violence', 'criminal', 'antisocial'],
+        contexts: ['perfume', 'deodorant', 'personal care', 'youth marketing'],
+        lesson: 'Indian advertising codes (ASCI Chapter III) strictly prohibit indecent, vulgar, or criminal/gang imagery. Perfume ads face heightened scrutiny.',
+        rationaleTemplate: 'The term "{phrase}" aligns with the Layer\'s Shot ad ban, where simulated gang scenarios and indecent content triggered an official ASCI ban under Chapter III.'
+      },
+      {
+        id: 'manyavar-kanyamaan',
+        brand: 'Manyavar',
+        year: 2022,
+        score: 78,
+        riskLevel: 'Caution',
+        primaryCategory: 'Sacred Ritual / Progressive Challenge',
+        triggers: ['kanyadaan', 'kanyamaan', 'giving away daughter', 'honoring daughter', 'wedding ritual', 'patriarchal ritual', 'bride property'],
+        contexts: ['wedding', 'wedding wear', 'marriage', 'bridal'],
+        lesson: 'Directly challenging sacred Hindu wedding rituals (e.g., Kanyadaan) invites multi-directional backlash from traditionalists and progressives alike.',
+        rationaleTemplate: 'The term "{phrase}" echoes the Manyavar Kanyamaan controversy, where challenging Kanyadaan generated both #BoycottManyavar calls and progressive accusations of performative woke-washing.'
+      },
+      {
+        id: 'kent-ro-classism',
+        brand: 'Kent RO',
+        year: 2020,
+        score: 80,
+        riskLevel: 'High Risk',
+        primaryCategory: 'Classism / Domestic Worker Stigma',
+        triggers: ['maid', 'servant', 'bai', 'kaamwali', 'lower class', 'uneducated', 'hygiene', 'classist'],
+        contexts: ['home appliances', 'water purifier', 'cleaning', 'hygiene'],
+        lesson: 'Ads that stigmatize domestic workers or lower-income groups as "unclean" or "uneducated" trigger classism backlash.',
+        rationaleTemplate: 'The reference to "{phrase}" recalls the Kent RO controversy, where a maid/domestic worker was framed as unhygienic, sparking widespread classism criticism.'
+      },
+      {
+        id: 'dabur-fem-karwa-chauth',
+        brand: 'Dabur Fem',
+        year: 2021,
+        score: 82,
+        riskLevel: 'High Risk',
+        primaryCategory: 'LGBTQ+ / Religious Ritual Tension',
+        triggers: ['same-sex', 'lesbian', 'karwa chauth', 'lgbtq', 'queer', 'homosexual', 'gay couple'],
+        contexts: ['beauty', 'skincare', 'festival', 'karwa chauth'],
+        lesson: 'Depicting same-sex couples around sacred/religious festivals can simultaneously alienate conservative audiences and be criticized as rainbow-washing.',
+        rationaleTemplate: 'The phrase "{phrase}" resembles the Dabur Fem Karwa Chauth same-sex ad controversy, which was withdrawn after mixed backlash from conservative and LGBTQ+ circles.'
+      },
+      {
+        id: 'swiggy-holi',
+        brand: 'Swiggy',
+        year: 2023,
+        score: 65,
+        riskLevel: 'Caution',
+        primaryCategory: 'Political / Festival Sensitivity',
+        triggers: ['holi', 'bura na mano', 'play holi', 'festival of colors', 'water wastage'],
+        contexts: ['food delivery', 'holi', 'festive offers'],
+        lesson: 'Holi messaging can trigger concerns about consent, water conservation, and cultural appropriation; avoid coercive "bura na mano" framing.',
+        rationaleTemplate: 'The term "{phrase}" relates to recurring Holi-season brand controversies (e.g., Swiggy 2023) around consent, water usage, and cultural framing.'
+      },
+      {
+        id: 'oyo-spiritual',
+        brand: 'OYO',
+        year: 2025,
+        score: 75,
+        riskLevel: 'Caution',
+        primaryCategory: 'Religious / Spiritual Misappropriation',
+        triggers: ['ashram', 'sadhu', 'sanyasi', 'spiritual retreat', 'moksha', 'nirvana', 'yogi'],
+        contexts: ['hospitality', 'travel', 'hotel', 'staycation'],
+        lesson: 'Commercial use of spiritual/ascetic imagery can be read as trivializing religious practice and mocking Hindu saints.',
+        rationaleTemplate: 'The reference to "{phrase}" echoes the OYO spiritual-misappropriation controversy, where ascetic/spiritual framing in hotel marketing was deemed disrespectful.'
+      },
+      {
+        id: 'patanjali-denigration',
+        brand: 'Patanjali',
+        year: 2025,
+        score: 90,
+        riskLevel: 'Critical',
+        primaryCategory: 'Legal / Competitive Denigration',
+        triggers: ['other brands poison', 'allopathy harmful', 'doctors corrupt', 'competitor unsafe', 'legal notice', 'ministry notice'],
+        contexts: ['ayurveda', 'fmcg', 'healthcare', 'medicine'],
+        lesson: 'Claims that denigrate entire industries, medical systems, or competitors attract legal action and government censure.',
+        rationaleTemplate: 'The phrase "{phrase}" aligns with the Patanjali legal-denigration case, where disparaging statements about allopathy and competitors led to Supreme Court/court scrutiny.'
+      },
+      {
+        id: 'sabyasachi-mangalsutra',
+        brand: 'Sabyasachi',
+        year: 2021,
+        score: 70,
+        riskLevel: 'Caution',
+        primaryCategory: 'Religious Symbolism / Sexualization',
+        triggers: ['mangalsutra', 'sindoor', 'bindi', 'sacred thread', 'sexualized tradition', 'bold mangalsutra'],
+        contexts: ['jewelry', 'fashion', 'wedding', 'luxury'],
+        lesson: 'Sexualized or provocative presentation of sacred symbols (mangalsutra, sindoor) offends traditional audiences.',
+        rationaleTemplate: 'The term "{phrase}" recalls the Sabyasachi mangalsutra ad backlash, where stylized/sexualized presentation of a sacred marital symbol drew boycott calls.'
+      },
+      {
+        id: 'zomato-pure-veg',
+        brand: 'Zomato',
+        year: 2024,
+        score: 72,
+        riskLevel: 'Caution',
+        primaryCategory: 'Food / Caste & Religious Segregation',
+        triggers: ['pure veg', 'veg only', 'vegetarian fleet', 'green delivery', 'food segregation', 'jain food'],
+        contexts: ['food delivery', 'logistics', 'restaurant'],
+        lesson: 'Segregating food delivery by dietary/religious categories can be praised by some but criticized as caste-reinforcing or discriminatory by others.',
+        rationaleTemplate: 'The phrase "{phrase}" evokes Zomato\'s Pure Veg fleet debate, where dietary segregation triggered accusations of casteism and discrimination.'
+      },
+      {
+        id: 'fenty-localization',
+        brand: 'Fenty Beauty',
+        year: 2025,
+        score: 68,
+        riskLevel: 'Caution',
+        primaryCategory: 'Localization / Cultural Blind Spot',
+        triggers: ['foreign brand india', 'tone deaf', 'local culture', 'global template', 'localization fail'],
+        contexts: ['beauty', 'cosmetics', 'global launch', 'india entry'],
+        lesson: 'Global brands entering India with template messaging often miss caste, colorism, and festival nuances.',
+        rationaleTemplate: 'The reference to "{phrase}" fits the Fenty Beauty localization-failure pattern, where global messaging ignored India-specific colorism and cultural dynamics.'
+      }
+    ],
+
+    // High-confidence keyword dictionary with calibrated deductions.
+    // Deductions are intentionally conservative so clean copy still scores 80–95, not a blanket 100.
+    keywordRules: [
+      // Religious sensitivity
+      { kw: 'jashn-e-riwaaz', cat: 'Linguistic / Religious Identity', score: 45, reason: 'Urdu/Persian phrase used for Hindu festivals triggers identity-based boycott campaigns.' },
+      { kw: 'urdu imposition', cat: 'Linguistic / Religious Identity', score: 40, reason: 'Direct invocation of the Hindi-Urdu political conflict.' },
+      { kw: 'mandir', cat: 'Religious Sensitivity', score: 18, reason: 'Direct temple references in commercial copy carry religious sensitivity risk.' },
+      { kw: 'masjid', cat: 'Religious Sensitivity', score: 18, reason: 'Direct mosque references in commercial copy carry religious sensitivity risk.' },
+      { kw: 'church', cat: 'Religious Sensitivity', score: 12, reason: 'Religious institution references require careful context.' },
+      { kw: 'sacred', cat: 'Religious Sensitivity', score: 15, reason: 'Mixing sacred terminology with commercial messaging risks backlash.' },
+      { kw: 'godh bharai', cat: 'Inter-faith / Religious Polarization', score: 20, reason: 'Ritual framing can become polarized if combined with inter-faith narratives.' },
+      { kw: 'kanyadaan', cat: 'Sacred Ritual / Progressive Challenge', score: 30, reason: 'Direct challenge to a sacred Hindu wedding ritual invites multi-directional backlash.' },
+      { kw: 'kanyamaan', cat: 'Sacred Ritual / Progressive Challenge', score: 28, reason: 'Ritual-reform coinages can be read as attacking tradition or performative woke-washing.' },
+      { kw: 'mangalsutra', cat: 'Religious Symbolism', score: 16, reason: 'Sacred marital symbol; sexualized or casual use risks offense.' },
+      { kw: 'sindoor', cat: 'Religious Symbolism', score: 16, reason: 'Sacred marital marker; trivialization triggers religious sentiment backlash.' },
+      { kw: 'ashram', cat: 'Religious / Spiritual Misappropriation', score: 22, reason: 'Commercial use of ascetic/spiritual institutions can seem mocking.' },
+      { kw: 'sadhu', cat: 'Religious / Spiritual Misappropriation', score: 22, reason: 'Commercial depiction of holy men risks religious disrespect.' },
+      { kw: 'moksha', cat: 'Religious / Spiritual Misappropriation', score: 18, reason: 'Sacred spiritual goal used commercially can trivialize belief.' },
+      { kw: 'halal', cat: 'Food / Religious Sensitivity', score: 20, reason: 'Halal certification debates are politically charged in India.' },
+      { kw: 'jhatka', cat: 'Food / Religious Sensitivity', score: 18, reason: 'Can trigger Sikh/Hindu vs Halal political framing.' },
+
+      // Caste / community / disability
+      { kw: 'kachra', cat: 'Disability / Caste / Stigmatized Language', score: 38, reason: 'Associates people with trash; recalls ableist/casteist Zomato controversy.' },
+      { kw: 'dalit', cat: 'Caste & Community Risk', score: 35, reason: 'Using community identity terms commercially is exploitative and legally sensitive.' },
+      { kw: 'brahmin', cat: 'Caste & Community Risk', score: 28, reason: 'Caste identity references polarize audiences and can violate ASCI fairness norms.' },
+      { kw: 'lower caste', cat: 'Caste & Community Risk', score: 42, reason: 'Direct caste-referencing is legally and socially sensitive.' },
+      { kw: 'untouchable', cat: 'Caste & Community Risk', score: 50, reason: 'Extremely stigmatized and legally sensitive term.' },
+      { kw: 'chamar', cat: 'Caste & Community Risk', score: 55, reason: 'Caste slur with high legal and social risk.' },
+      { kw: 'chuhra', cat: 'Caste & Community Risk', score: 55, reason: 'Derogatory caste term.' },
+      { kw: 'bhangi', cat: 'Caste & Community Risk', score: 55, reason: 'Derogatory caste term associated with manual scavenging.' },
+      { kw: 'bihari', cat: 'Regional / Ethnic Slur', score: 25, reason: 'Can be used as a regional slur and triggers migration/labour stigma.' },
+      { kw: 'chinki', cat: 'Racial / Ethnic Slur', score: 55, reason: 'Racial slur targeting Northeast Indians.' },
+      { kw: 'madrasi', cat: 'Regional / Ethnic Slur', score: 22, reason: 'Outdated and often derogatory umbrella term for South Indians.' },
+      { kw: 'disabled', cat: 'Disability Sensitivity', score: 10, reason: 'Neutral descriptor; risk depends on whether person is associated with negative concepts.' },
+      { kw: 'dwarf', cat: 'Disability Sensitivity', score: 18, reason: 'Medical/descriptive term; combining with negative metaphors is ableist.' },
+      { kw: 'maid', cat: 'Classism / Domestic Worker Stigma', score: 20, reason: 'Domestic-worker framing can reinforce classist hierarchies.' },
+      { kw: 'servant', cat: 'Classism / Domestic Worker Stigma', score: 22, reason: 'Can carry feudal/classist connotations.' },
+
+      // Political / ideological
+      { kw: 'love jihad', cat: 'Inter-faith / Religious Polarization', score: 55, reason: 'Highly polarized and legally fraught political narrative.' },
+      { kw: 'khalistan', cat: 'Political / Separatist Sensitivity', score: 50, reason: 'Extremely polarizing separatist trigger.' },
+      { kw: 'khalistani', cat: 'Political / Separatist Sensitivity', score: 50, reason: 'Used as both accusation and slur; high polarization risk.' },
+      { kw: 'jihad', cat: 'Religious / Political Sensitivity', score: 45, reason: 'Highly charged religious/political term with extreme polarization potential.' },
+      { kw: 'kafir', cat: 'Religious Sensitivity', score: 48, reason: 'Religiously derogatory slur — severe PR and legal exposure.' },
+      { kw: 'katwa', cat: 'Religious / Political Slur', score: 55, reason: 'Communal slur; severe risk.' },
+      { kw: 'nationalist', cat: 'Political Neutrality', score: 18, reason: 'Brand alignment with nationalism can alienate segments and trigger political polarization.' },
+      { kw: 'azaadi', cat: 'Political Neutrality', score: 22, reason: 'Politically charged slogan with contested meanings.' },
+      { kw: 'revolution', cat: 'Political Neutrality', score: 14, reason: 'Revolutionary language can be read as politically provocative.' },
+      { kw: 'boycott', cat: 'Call to Action / Backlash Risk', score: 20, reason: 'Including boycott language can amplify or invite cancel campaigns.' },
+
+      // Gender / social tone
+      { kw: 'fairness', cat: 'Gender & Social Tone', score: 28, reason: 'Skin-tone fairness claims carry legal and reputational risk under ASCI/DTCP.' },
+      { kw: 'whitening', cat: 'Gender & Social Tone', score: 40, reason: 'Explicit skin-whitening claims are banned under ASCI/DTCP.' },
+      { kw: 'fair and lovely', cat: 'Gender & Social Tone', score: 35, reason: 'Colorist product framing with documented regulatory history.' },
+      { kw: 'cheap', cat: 'Gender & Social Tone', score: 15, reason: 'Risk of classist or exploitative brand connotations.' },
+      { kw: 'lower class', cat: 'Classism', score: 35, reason: 'Direct class hierarchy language is socially sensitive.' },
+      { kw: 'uneducated', cat: 'Classism', score: 20, reason: 'Can stigmatize lower-literacy or lower-income groups.' },
+      { kw: 'slum', cat: 'Classism', score: 18, reason: 'Poverty tourism framing risks classist backlash.' },
+      { kw: 'item', cat: 'Gender Objectification', score: 22, reason: 'Objectifying term for women in several Indian languages.' },
+      { kw: 'maal', cat: 'Gender Objectification', score: 28, reason: 'Slang objectifying women; high reputational risk.' },
+      { kw: 'rape', cat: 'Violence / Sexual Sensitivity', score: 55, reason: 'Extreme trigger; trivialization or metaphorical use causes severe backlash.' },
+      { kw: 'gang rape', cat: 'Violence / Sexual Sensitivity', score: 70, reason: 'Severe trauma trigger; absolutely avoid in marketing.' },
+
+      // Indecent / criminal / regulatory
+      { kw: 'gang', cat: 'ASCI / Indecent & Criminal Imagery', score: 25, reason: 'Gang imagery can violate ASCI Chapter III against criminal/antisocial depictions.' },
+      { kw: 'mafia', cat: 'ASCI / Indecent & Criminal Imagery', score: 25, reason: 'Glorification of organized crime is prohibited in Indian advertising.' },
+      { kw: 'indecent', cat: 'ASCI / Indecent Content', score: 20, reason: 'Self-describing as indecent signals regulatory risk.' },
+      { kw: 'vulgar', cat: 'ASCI / Indecent Content', score: 20, reason: 'Explicit vulgar framing risks ASCI Chapter III ban.' },
+      { kw: 'sex', cat: 'Sexual Sensitivity', score: 18, reason: 'Sexual explicitness in mass advertising risks public-decency complaints.' },
+      { kw: 'sexy', cat: 'Sexual Sensitivity', score: 15, reason: 'Mild sexualization; category-dependent risk.' },
+      { kw: 'nude', cat: 'Sexual Sensitivity', score: 35, reason: 'Nudity references in mass advertising are high-risk.' },
+      { kw: 'naked', cat: 'Sexual Sensitivity', score: 30, reason: 'Sexually suggestive language with regulatory risk.' },
+
+      // Legal / competitive denigration
+      { kw: 'poison', cat: 'Legal / Competitive Denigration', score: 25, reason: 'Denigrating competitors/products as poisonous attracts legal/regulatory action.' },
+      { kw: 'harmful', cat: 'Legal / Competitive Denigration', score: 18, reason: 'Broad health claims against categories can be legally challenged.' },
+      { kw: 'doctors corrupt', cat: 'Legal / Competitive Denigration', score: 40, reason: 'Attacking professions invites defamation and government notices.' },
+
+      // Profanity
+      { kw: 'fuck', cat: 'Profanity', score: 70, reason: 'Explicit profanity guarantees severe PR damage and platform rejection.' },
+      { kw: 'shit', cat: 'Profanity', score: 45, reason: 'Mild profanity; mass-media inappropriate.' },
+      { kw: 'bitch', cat: 'Profanity / Gender Slur', score: 55, reason: 'Gendered slur with severe reputational risk.' },
+      { kw: 'bastard', cat: 'Profanity', score: 50, reason: 'Strong profanity and illegitimacy slur.' },
+      { kw: 'asshole', cat: 'Profanity', score: 50, reason: 'Strong profanity.' },
+      { kw: 'cunt', cat: 'Profanity', score: 80, reason: 'Extreme gendered profanity; platform-ban risk.' },
+      { kw: 'bsdk', cat: 'Profanity', score: 55, reason: 'Hindi profanity; severe in Indian context.' },
+      { kw: 'bhosada', cat: 'Profanity / Gender Slur', score: 60, reason: 'Hindi vulgar slur; severe risk.' },
+      { kw: 'chut', cat: 'Profanity / Gender Slur', score: 65, reason: 'Hindi vulgar slur; extreme risk.' },
+      { kw: 'gaand', cat: 'Profanity', score: 45, reason: 'Hindi profanity; inappropriate for mass media.' },
+      { kw: 'lund', cat: 'Profanity', score: 60, reason: 'Hindi profanity; severe risk.' },
+      { kw: 'randi', cat: 'Profanity / Gender Slur', score: 70, reason: 'Hindi gendered slur; extreme risk.' },
+
+      // Double entendre / regional
+      { kw: 'bang', cat: 'Sarcasm & Double Meaning', score: 14, reason: 'Regional double-entendre connotations.' },
+      { kw: 'shot', cat: 'Sarcasm & Double Meaning', score: 12, reason: 'Can carry alcoholic or sexual connotations depending on context.' },
+      { kw: 'thrust', cat: 'Sarcasm & Double Meaning', score: 16, reason: 'Sexual double-entendre risk.' },
+      { kw: 'booty', cat: 'Sarcasm & Double Meaning', score: 18, reason: 'Slang with sexual/objectifying connotations.' },
+      { kw: 'mutthi', cat: 'Profanity / Double Meaning', score: 40, reason: 'Hindi slang with strong vulgar connotation.' },
+      { kw: 'launda', cat: 'Regional / Gender Slang', score: 15, reason: 'Can be demeaning depending on context.' }
+    ],
+
+    // Contextual phrase patterns (multi-word risk signatures)
+    phrasePatterns: [
+      { regex: /inter[-\s]?faith\s+(wedding|marriage|family|couple|baby|shower)/i, cat: 'Inter-faith / Religious Polarization', score: 30, reason: 'Inter-faith family narratives are polarized in India.' },
+      { regex: /hindu[-\s]?muslim/i, cat: 'Inter-faith / Religious Polarization', score: 35, reason: 'Direct Hindu-Muslim framing is politically explosive.' },
+      { regex: /muslim[-\s]?mother[-\s]?in[-\s]?law/i, cat: 'Inter-faith / Religious Polarization', score: 40, reason: 'Echoes Tanishq Ekatvam narrative.' },
+      { regex: /urdu\s+(diwali|holi|navratri|festival)/i, cat: 'Linguistic / Religious Identity', score: 35, reason: 'Urdu terminology for Hindu festivals triggers identity backlash.' },
+      { regex: /celebration\s+of\s+traditions/i, cat: 'Linguistic / Religious Identity', score: 20, reason: 'Close paraphrase of FabIndia Jashn-e-Riwaaz tagline.' },
+      { regex: /recycling\s+kachra/i, cat: 'Disability / Caste / Stigmatized Language', score: 35, reason: 'Echoes Zomato Kachra campaign structure.' },
+      { regex: /giving\s+away\s+(the\s+)?daughter/i, cat: 'Sacred Ritual / Progressive Challenge', score: 28, reason: 'Direct challenge to Kanyadaan ritual framing.' },
+      { regex: /pure\s+veg\s+(fleet|delivery|only)/i, cat: 'Food / Religious Segregation', score: 25, reason: 'Dietary segregation debates around caste/religion.' },
+      { regex: /allopathy\s+(harmful|poison|useless)/i, cat: 'Legal / Competitive Denigration', score: 40, reason: 'Patanjali-style denigration of medical systems.' },
+      { regex: /other\s+brands?\s+(poison|harmful|unsafe)/i, cat: 'Legal / Competitive Denigration', score: 38, reason: 'Competitive denigration invites legal action.' },
+      { regex: /gang\s+(style|scenario|culture|look)/i, cat: 'ASCI / Indecent & Criminal Imagery', score: 30, reason: 'ASCI Chapter III risk for criminal imagery.' },
+      { regex: /sexual\s+(fantasy|desire|pleasure)/i, cat: 'Sexual Sensitivity', score: 25, reason: 'Explicit sexual framing risks public decency complaints.' }
+    ],
+
+    // Severity caps for combinations that should never score high
+    hardCaps: [
+      { regex: /(mutthi\s*maro?|mutthi\s*maar)/i, cap: 8, risk: 'High Risk', reason: 'Extreme vulgar Hindi slang.' },
+      { regex: /\b(chutiya|chutiye)\b/i, cap: 10, risk: 'High Risk', reason: 'Severe Hindi profanity.' },
+      { regex: /\b(bhosadike|bhosdiwale?)\b/i, cap: 8, risk: 'High Risk', reason: 'Severe Hindi profanity.' },
+      { regex: /gang\s*rape/i, cap: 2, risk: 'Critical', reason: 'Trauma trigger; absolutely unsuitable for marketing.' },
+      { regex: /(nude\s*search|nude\s*pic|nude\s*photo)/i, cap: 8, risk: 'High Risk', reason: 'Sexual exploitation context.' },
+      { regex: /\b(fuck\s*(you|off)?|shit|asshole|cunt)\b/i, cap: 12, risk: 'High Risk', reason: 'Explicit profanity.' }
+    ]
+  };
+
+  // Expose globally for sandbox.js and index.html
+  root.BRANDCHECK_RAG_KB = RAG_KB;
+})(typeof window !== 'undefined' ? window : globalThis);
