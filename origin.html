@@ -94,10 +94,15 @@
   <nav class="border-b transition-colors duration-200 sticky top-0 z-40 px-6 py-4"
        :class="darkMode ? 'border-slate-800 bg-brandBgDark/85 backdrop-blur-md' : 'border-slate-200 bg-brandBgLight/85 backdrop-blur-md'">
     <div class="max-w-6xl mx-auto flex justify-between items-center">
-      <div class="flex items-center gap-3 cursor-pointer" onclick="window.location.href='index.html'">
-        <img src="assets/images/logo-light-mode.svg" alt="BrandCheck Pro Logo" class="block dark:hidden h-12 w-auto" />
-        <img src="assets/images/logo-dark-mode.svg" alt="BrandCheck Pro Logo" class="hidden dark:block h-12 w-auto" />
-      </div>
+      <!-- Unified BrandCheck Pro Logo Wrapper -->
+      <a href="/" class="flex items-center block focus:outline-none z-50" aria-label="BrandCheck Pro Home">
+        <img 
+          src="/BrandcheckMainlogo.svg" 
+          alt="BrandCheck Pro Logo" 
+          class="object-contain"
+          style="height: 48px; width: auto; display: block; min-width: 140px;"
+        />
+      </a>
       
       <div class="hidden md:flex items-center gap-8 text-sm font-medium">
         <a href="index.html" :class="darkMode ? 'text-slate-300 hover:text-brandNeon' : 'text-slate-600 hover:text-brandNeon'" class="transition">Dashboard</a>

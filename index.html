@@ -78,13 +78,15 @@
   <nav class="border-b px-6 py-4 sticky top-0 z-40 transition-colors duration-200"
        :class="darkMode ? 'border-slate-800 bg-brandBgDark/85 backdrop-blur-md' : 'border-slate-200 bg-brandBgLight/85 backdrop-blur-md'">
     <div class="max-w-6xl mx-auto flex justify-between items-center">
-      <!-- BrandCheck Pro Dynamic Logo Wrapper -->
-      <div class="flex items-center flex-shrink-0 py-1">
-        <!-- Light Mode Logo (Visible on light backgrounds) -->
-        <img src="assets/images/logo-light-mode.svg" alt="BrandCheck Pro" class="block dark:hidden h-10 w-auto object-contain" />
-        <!-- Dark Mode Logo (Visible when .dark class is active) -->
-        <img src="assets/images/logo-dark-mode.svg" alt="BrandCheck Pro" class="hidden dark:block h-10 w-auto object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]" />
-      </div>
+      <!-- Unified BrandCheck Pro Logo Wrapper -->
+      <a href="/" class="flex items-center block focus:outline-none z-50" aria-label="BrandCheck Pro Home">
+        <img 
+          src="/BrandcheckMainlogo.svg" 
+          alt="BrandCheck Pro Logo" 
+          class="object-contain"
+          style="height: 48px; width: auto; display: block; min-width: 140px;"
+        />
+      </a>
       <div class="hidden md:flex items-center gap-8 text-sm font-medium">
         <a href="index.html" class="text-brandNeon font-semibold transition">Dashboard</a>
         <a href="blog.html" class="transition" :class="darkMode ? 'text-slate-400 hover:text-brandNeon' : 'text-slate-600 hover:text-brandNeon'">Brand Stories</a>
@@ -371,10 +373,15 @@
     <div class="border max-w-sm w-full p-8 rounded-xl shadow-2xl relative text-center transition-colors duration-200"
          :class="darkMode ? 'bg-brandSurfaceDark border-slate-700' : 'bg-white border-slate-200'">
       <button @click="authModal = false" class="absolute top-4 right-4 hover:text-white text-xl leading-none" :class="darkMode ? 'text-slate-400' : 'text-slate-500'">&times;</button>
-      <div class="mb-4">
-        <img src="assets/images/logo-light-mode.svg" alt="BrandCheck Pro Logo" class="h-10 w-auto" :class="darkMode ? 'hidden' : 'block'" />
-        <img src="assets/images/logo-dark-mode.svg" alt="BrandCheck Pro Logo" class="h-10 w-auto" :class="darkMode ? 'block' : 'hidden'" />
-      </div>
+      <!-- Unified BrandCheck Pro Logo Wrapper -->
+      <a href="/" class="flex items-center block focus:outline-none z-50" aria-label="BrandCheck Pro Home">
+        <img 
+          src="/BrandcheckMainlogo.svg" 
+          alt="BrandCheck Pro Logo" 
+          class="object-contain"
+          style="height: 48px; width: auto; display: block; min-width: 140px;"
+        />
+      </a>
       <h3 class="text-lg font-bold mb-2" :class="darkMode ? 'text-white' : 'text-slate-900'">Welcome to BrandCheck <span class="text-brandNeon">Pro</span></h3>
       <p class="text-xs mb-6" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Sign in to save your scan history and unlock team features.</p>
       
