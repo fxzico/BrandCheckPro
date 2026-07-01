@@ -148,10 +148,15 @@
   <!-- Main Banner Header -->
   <header class="border-b border-slate-800 bg-brandSurface/20 backdrop-blur-md sticky top-0 z-40 px-6 py-4">
     <div class="max-w-6xl mx-auto flex justify-between items-center">
-      <div class="flex items-center gap-3 cursor-pointer" onclick="window.location.href='../index.html'">
-        <div class="w-3 h-3 bg-brandNeon rounded-full shadow-[0_0_10px_#38BDF8]"></div>
-        <span class="font-display text-xl font-bold tracking-tight">BrandCheck <span class="text-brandNeon">Pro</span></span>
-      </div>
+      <!-- Unified BrandCheck Pro Logo Wrapper -->
+      <a href="/" class="flex items-center block focus:outline-none z-50" aria-label="BrandCheck Pro Home">
+        <img 
+          src="/BrandcheckMainlogo.svg" 
+          alt="BrandCheck Pro Logo" 
+          class="object-contain"
+          style="height: 48px; width: auto; display: block; min-width: 140px;"
+        />
+      </a>
       <div class="flex items-center gap-6 text-sm">
         <a href="../index.html" class="text-slate-400 hover:text-brandNeon transition font-medium">&larr; Main Portal</a>
         <span class="text-slate-600">|</span>
