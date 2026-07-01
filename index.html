@@ -62,6 +62,10 @@
     // SUPABASE_EDGE_FUNCTION = "";  // e.g. "https://<project>.supabase.co/functions/v1/analyze"
     // SUPABASE_ANON_KEY = "";       // public anon key only; API secrets stay server-side
   </script>
+
+  <!-- Browser Tab Favicon Configurations -->
+  <link rel="icon" type="image/svg+xml" href="assets/images/logo-light-mode.svg" />
+  <link rel="alternate icon" type="image/png" href="assets/images/favicon.png" />
 </head>
 <body class="transition-colors duration-200 font-sans antialiased min-h-screen flex flex-col"
       :class="darkMode ? 'dark bg-brandBgDark text-slate-100' : 'bg-brandBgLight text-slate-800'"
@@ -75,11 +79,11 @@
        :class="darkMode ? 'border-slate-800 bg-brandBgDark/85 backdrop-blur-md' : 'border-slate-200 bg-brandBgLight/85 backdrop-blur-md'">
     <div class="max-w-6xl mx-auto flex justify-between items-center">
       <!-- BrandCheck Pro Dynamic Logo Wrapper -->
-      <div class="flex items-center flex-shrink-0">
-        <!-- Displayed ONLY on Light Mode (Hidden when .dark class is active on the HTML document) -->
-        <img src="assets/images/logo-light-mode.svg" alt="BrandCheck Pro" class="block dark:hidden h-12 w-auto" />
-        <!-- Displayed ONLY on Dark Mode (Visible only when .dark class is active on the HTML document) -->
-        <img src="assets/images/logo-dark-mode.svg" alt="BrandCheck Pro" class="hidden dark:block h-12 w-auto" />
+      <div class="flex items-center flex-shrink-0 py-1">
+        <!-- Light Mode Logo (Visible on light backgrounds) -->
+        <img src="assets/images/logo-light-mode.svg" alt="BrandCheck Pro" class="block dark:hidden h-10 w-auto object-contain" />
+        <!-- Dark Mode Logo (Visible when .dark class is active) -->
+        <img src="assets/images/logo-dark-mode.svg" alt="BrandCheck Pro" class="hidden dark:block h-10 w-auto object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]" />
       </div>
       <div class="hidden md:flex items-center gap-8 text-sm font-medium">
         <a href="index.html" class="text-brandNeon font-semibold transition">Dashboard</a>
