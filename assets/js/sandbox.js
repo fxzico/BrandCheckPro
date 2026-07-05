@@ -401,7 +401,10 @@ async function callSecureGateway(endpoint, body) {
 
 async function executeComplianceCheck(brandContext, demographics, campaignCopy, sensitivity = 'Standard') {
   const byokKey = localStorage.getItem('BC_LIVE_CORE_KEY') || '';
-  const body = { text: campaignCopy, brand_context: brandContext, demographics, sensitivity };
+  const body = { 
+  prompt: buildSystemPrompt(brandContext, demographics, campaignCopy, sensitivity), 
+  customKey: byokKey 
+};
 
   // Prioritize Cloud Supabase Edge Function Endpoint
   if (SUPABASE_EDGE_FUNCTION) {
