@@ -1847,39 +1847,63 @@ function brandCheckApp() {
     },
 
     async runComplianceCheck() {
-      this.loader = true;
-      this.showResults = false;
-      this.inferenceStatus = 'Analyzing Slogan...';
-      try {
-        // Execute the sandbox broker function
-        const data = await executeComplianceCheck(this.brandContext, this.demographics, this.campaignCopy);
-        // Add a small artificial delay for visual fidelity
-        setTimeout(() => {
-          this.results = data || {
-            overall_score: 0,
-            risk_level: 'API Error',
-            summary: '⚠️ The analysis engine returned no data. Please check your API key and try again.',
-            flagged_issues: []
-          };
-          if (data && data.isOfflineFallback) {
-            this.inferenceStatus = 'Inference Core: Sandbox Mode (Offline Fallback Active)';
-          } else {
-            this.inferenceStatus = 'Inference Core Ready';
-          }
-          this.loader = false;
-          this.showResults = true;
-        }, 800);
-      } catch (err) {
-        console.error('[BrandCheck Pro] Fatal execution error:', err);
-        this.loader = false;
-        this.inferenceStatus = 'Inference Core: Error';
+      // 1. Initial Validation Check
+      if (!this.campaignCopy.trim()) {
         this.results = {
           overall_score: 0,
           risk_level: 'API Error',
-          summary: `⚠️ Fatal Execution Error — ${err.message}. Open the browser console for full details.`,
+          summary: 'Please enter your ad or slogan before scanning.',
           flagged_issues: []
         };
+        this.engineUsed = 'Validation';
         this.showResults = true;
+        return;
+      }
+
+      // 2. Set UI Loading States
+      this.loader = true; 
+      this.showResults = false;
+      this.inferenceStatus = 'Scanning...';
+      
+      try {
+        // 3. Send payload securely to the live Supabase Edge Function endpoint
+        const response = await fetch('https://oplmhoyvflujrulkrawj.supabase.co/functions/v1/quick-endpoint', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            prompt: `Evaluate the following campaign copywriting context and slogan for structural socio-cultural, religious, or political risk factors across sub-markets in India. Context: ${this.brandContext}. Slogan/Copy: ${this.campaignCopy}`,
+            customKey: this.cloudEngineKey
+          })
+        });
+
+        if (!response.ok) throw new Error('Backend engine returned an error status.');
+        const data = await response.json();
+
+        // 4. Map the API Response Fields directly into UI states
+        this.results = {
+          overall_score: data.overall_score !== undefined ? data.overall_score : 100,
+          risk_level: data.risk_level || 'Safe',
+          summary: data.summary || '',
+          flagged_issues: data.flagged_issues || []
+        };
+        
+        this.engineUsed = data?.engine || (data?.isOfflineFallback ? 'Built-in scan' : 'AI scan');
+        this.inferenceStatus = data?.isOfflineFallback
+          ? 'Offline scan active'
+          : (this.cloudEngineKey ? 'AI connected' : 'Ready');
+
+      } catch (error) {
+        console.error('[BrandCheck Pro] Fatal execution error:', error);
+        this.inferenceStatus = 'Scan error';
+        this.results = {
+          overall_score: 0,
+          risk_level: 'Error',
+          summary: 'Failed to complete cloud synchronization routine.',
+          flagged_issues: [{ id: 1, message: error.message || 'Unknown network error.' }]
+        };
+      } finally {
+        this.loader = false; 
+        this.showResults = true; 
       }
     }
   };

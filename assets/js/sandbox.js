@@ -1,64 +1,36 @@
 /**
  * BrandCheck Pro — Volatile RAM Sandbox Simulation Engine v3
- * Routing Architecture (2026):
- *   1. BYOK key (any provider)      → Direct provider API call with model fallback chain
- *   2. No BYOK + backend configured  → Backend gateway uses operator-paid key securely
- *   3. No BYOK + no backend          → Offline RAG/heuristic engine (never returns hard 100)
- *
- * The operator-paid DEFAULT_API_KEY is stored ONLY on the backend (backend/.env).
- * It is never exposed in front-end code.
- *
- * Supported BYOK key prefixes (auto-detected):
- *   sk-or-*              → OpenRouter
- *   AIza*                → Google AI Studio (Gemini)
- *   sk-* / sk-proj-*     → OpenAI
- *   sk-ant-*             → Anthropic
- *   anything else        → OpenRouter-compatible fallback
- *
- * Backend gateway:
- *   Set BACKEND_URL below. The backend resolves keys server-side:
- *     • Signed-in users get the operator-paid key on every run
- *     • Anonymous visitors get one complimentary paid run (first-use-per-IP)
+ * Routing Architecture (2026)
  */
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // BACKEND / EDGE GATEWAY CONFIGURATION
 // ═══════════════════════════════════════════════════════════════════════════════
-const BACKEND_URL = "";  // e.g. "http://localhost:8000" or "/api"
+const BACKEND_URL = "";  
+const SUPABASE_EDGE_FUNCTION = "https://oplmhoyvflujrulkrawj.supabase.co/functions/v1/quick-endpoint";  
+const SUPABASE_ANON_KEY = "";        
 
-// Optional Supabase Edge Function or Vercel Function proxy for secure key handling.
-// If set, it overrides BACKEND_URL for the primary gateway call.
-const SUPABASE_EDGE_FUNCTION = "";  // e.g. "https://<project>.supabase.co/functions/v1/analyze"
-const SUPABASE_ANON_KEY = "";       // public anon key; secrets stay server-side
-
-// OpenRouter model pool (tried in order)
 const OR_MODEL_POOL = [
   "openrouter/auto",
-  "google/gemini-2.0-flash-001",
+  "google/gemini-3.5-flash",
+  "anthropic/claude-5-sonnet",
   "qwen/qwen-2.5-72b-instruct:free",
-  "meta-llama/llama-3.1-8b-instruct:free",
-  "mistralai/mistral-7b-instruct:free"
+  "meta-llama/llama-3.1-8b-instruct:free"
 ];
 
-// Google AI Studio model pool (tried in order)
+// 2026 Gemini Model Pool
 const GEMINI_POOL = [
-  "gemini-2.5-flash",
-  "gemini-2.5-pro",
-  "gemini-2.0-flash",
-  "gemini-2.0-flash-lite",
-  "gemini-1.5-flash",
-  "gemini-1.5-pro"
+  "gemini-3.5-flash",
+  "gemini-3.1-flash-lite"
 ];
 
-// OpenAI / Anthropic defaults
-const OPENAI_MODEL = "gpt-4o-mini";
-const ANTHROPIC_MODEL = "claude-3-5-haiku-20241022";
-
-// Custom self-hosted inference gateway (optional)
+// 2026 OpenAI & Anthropic Models
+const OPENAI_MODEL = "gpt-5.5";
+const ANTHROPIC_MODEL = "claude-5-sonnet"; 
 const ENGINE_CONFIG = { api_endpoint: null };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// GLOBAL UTILITY FUNCTIONS (shared across all pages)
+// GLOBAL UTILITY FUNCTIONS
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function normalizeAnalysisPayload(data, engineLabel) {
@@ -123,30 +95,17 @@ function providerLabel(apiKey) {
   return map[detectProvider(apiKey)] || 'AI scan';
 }
 
-function isFirstUseDefaultConsumed() {
-  return localStorage.getItem('BC_FIRST_USE_DEFAULT_CONSUMED') === '1';
-}
-
-function markFirstUseDefaultConsumed() {
-  localStorage.setItem('BC_FIRST_USE_DEFAULT_CONSUMED', '1');
-}
-
-function resetFirstUseDefault() {
-  localStorage.removeItem('BC_FIRST_USE_DEFAULT_CONSUMED');
-}
+function isFirstUseDefaultConsumed() { return localStorage.getItem('BC_FIRST_USE_DEFAULT_CONSUMED') === '1'; }
+function markFirstUseDefaultConsumed() { localStorage.setItem('BC_FIRST_USE_DEFAULT_CONSUMED', '1'); }
+function resetFirstUseDefault() { localStorage.removeItem('BC_FIRST_USE_DEFAULT_CONSUMED'); }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PROMPT BUILDER
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function buildSystemPrompt(brandContext, demographics, campaignCopy, sensitivity) {
-  const caseNames = (window.BRANDCHECK_RAG_KB?.case_studies || [])
-    .map(c => `"${c.brand} — ${c.incident}"`).join(', ');
-
-  const riskPatterns = (window.BRANDCHECK_RAG_KB?.risk_patterns || [])
-    .slice(0, 8)
-    .map(p => `- ${p.pattern}: ${p.score_impact}, ${p.rationale}`)
-    .join('\n');
+  const caseNames = (window.BRANDCHECK_RAG_KB?.case_studies || []).map(c => `"${c.brand} — ${c.incident}"`).join(', ');
+  const riskPatterns = (window.BRANDCHECK_RAG_KB?.risk_patterns || []).slice(0, 8).map(p => `- ${p.pattern}: ${p.score_impact}, ${p.rationale}`).join('\n');
 
   return `You are BrandCheck Pro, an enterprise linguistic compliance engine for Indian markets.
 Analyze the campaign copy below through the lens of documented Indian marketing crises.
@@ -161,17 +120,11 @@ Return ONLY a valid JSON object — no markdown fences, no commentary — with t
   ]
 }
 
-SCORING RUBRIC (use it):
-- 91-100 Safe: copy is clean, inclusive, and aligned with ASCI / platform policies.
-- 71-90 Caution: minor tonal or contextual risks; refine before broad launch.
-- 41-70 High Risk: clear religious, political, caste, gender, class, or profanity signals.
-- 0-40 Critical: legal/communal/platform-ban level violations.
-
-IMPORTANT: Do NOT award 100/100 unless the copy is demonstrably flawless. Most real-world campaigns merit 88-96 when clean. Always deduct a few points for any ambiguity, regional double-meaning, or platform-policy edge case.
-
-Reference cases: ${caseNames || 'Fabindia Jashn-e-Riwaaz, Tanishq Ekatvam, Zomato Kachra, Layer\'s Shot, Manyavar Kanyamaan'}.
-Reference patterns:
-${riskPatterns || '- Religious festival renamed with non-Hindu terminology: high backlash risk.\n- Inter-faith portrayal in polarized climate: boycott risk.\n- Caste/community slur or stereotype: legal and PR crisis.\n- Profanity or sexually suggestive slang: platform policy violation.'}
+SCORING RUBRIC:
+- 91-100 Safe: copy clean, inclusive.
+- 71-90 Caution: minor tonal or contextual risks.
+- 41-70 High Risk: clear religious, political, caste, gender, or profanity signals.
+- 0-40 Critical: legal/communal violations.
 
 Input:
 Brand/Product Context: ${brandContext || 'Not provided'}
@@ -180,18 +133,12 @@ Risk Sensitivity: ${sensitivity || 'Standard'}
 Campaign Copy: ${campaignCopy}`;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PROVIDER CALLERS WITH MODEL FALLBACK
-// ═══════════════════════════════════════════════════════════════════════════════
-
 async function resolveGoogleModel(apiKey) {
   try {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`);
     if (res.ok) {
       const payload = await res.json();
-      const candidates = (payload.models || [])
-        .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
-        .map(m => String(m.name || '').replace(/^models\//, ''));
+      const candidates = (payload.models || []).filter(m => (m.supportedGenerationMethods || []).includes('generateContent')).map(m => String(m.name || '').replace(/^models\//, ''));
       const hit = GEMINI_POOL.find(name => candidates.includes(name));
       if (hit) return hit;
       if (candidates.length) return candidates[0];
@@ -203,17 +150,14 @@ async function resolveGoogleModel(apiKey) {
 }
 
 async function callGoogleModel(apiKey, model, prompt) {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0.2 }
-      })
-    }
-  );
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.2 }
+    })
+  });
   if (!res.ok) throw new Error(await readErrorMessage(res));
   const payload = await res.json();
   return payload.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -226,8 +170,7 @@ async function runGoogleAnalysis(apiKey, prompt) {
   for (const model of models) {
     try {
       const rawText = await callGoogleModel(apiKey, model, prompt);
-      const data = normalizeAnalysisPayload(extractJsonPayload(rawText), `AI scan: Google AI Studio (${model})`);
-      return data;
+      return normalizeAnalysisPayload(extractJsonPayload(rawText), `AI scan: Google AI Studio (${model})`);
     } catch (err) {
       errors.push(`${model}: ${err.message}`);
       if (!/not found|not supported|permission|quota|api key/i.test(err.message)) break;
@@ -247,10 +190,7 @@ async function callOpenRouterModel(apiKey, model, prompt) {
     },
     body: JSON.stringify({
       model,
-      messages: [
-        { role: 'system', content: 'Return only strict JSON. No markdown.' },
-        { role: 'user', content: prompt }
-      ],
+      messages: [{ role: 'system', content: 'Return only strict JSON. No markdown.' }, { role: 'user', content: prompt }],
       temperature: 0.2
     })
   });
@@ -264,8 +204,7 @@ async function runOpenRouterAnalysis(apiKey, prompt) {
   for (const model of OR_MODEL_POOL) {
     try {
       const rawText = await callOpenRouterModel(apiKey, model, prompt);
-      const data = normalizeAnalysisPayload(extractJsonPayload(rawText), `AI scan: OpenRouter (${model})`);
-      return data;
+      return normalizeAnalysisPayload(extractJsonPayload(rawText), `AI scan: OpenRouter (${model})`);
     } catch (err) {
       errors.push(`${model}: ${err.message}`);
       if (/invalid api key|unauthorized|authentication/i.test(err.message)) break;
@@ -280,31 +219,20 @@ async function runOpenAIAnalysis(apiKey, prompt) {
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: OPENAI_MODEL,
-      messages: [
-        { role: 'system', content: 'Return only strict JSON. No markdown.' },
-        { role: 'user', content: prompt }
-      ],
+      messages: [{ role: 'system', content: 'Return only strict JSON. No markdown.' }, { role: 'user', content: prompt }],
       response_format: { type: 'json_object' },
       temperature: 0.2
     })
   });
-  if (!res.ok) {
-    const err = await readErrorMessage(res);
-    throw new Error(`OpenAI: ${err}`);
-  }
+  if (!res.ok) throw new Error(`OpenAI: ${await readErrorMessage(res)}`);
   const payload = await res.json();
-  const rawText = payload.choices?.[0]?.message?.content;
-  return normalizeAnalysisPayload(extractJsonPayload(rawText), 'AI scan: OpenAI BYOK');
+  return normalizeAnalysisPayload(extractJsonPayload(payload.choices?.[0]?.message?.content), 'AI scan: OpenAI BYOK');
 }
 
 async function runAnthropicAnalysis(apiKey, prompt) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'Content-Type': 'application/json',
-      'anthropic-version': '2023-06-01'
-    },
+    headers: { 'x-api-key': apiKey, 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({
       model: ANTHROPIC_MODEL,
       max_tokens: 1024,
@@ -313,38 +241,22 @@ async function runAnthropicAnalysis(apiKey, prompt) {
       temperature: 0.2
     })
   });
-  if (!res.ok) {
-    const err = await readErrorMessage(res);
-    throw new Error(`Anthropic: ${err}`);
-  }
+  if (!res.ok) throw new Error(`Anthropic: ${await readErrorMessage(res)}`);
   const payload = await res.json();
-  const rawText = payload.content?.[0]?.text;
-  return normalizeAnalysisPayload(extractJsonPayload(rawText), 'AI scan: Anthropic BYOK');
+  return normalizeAnalysisPayload(extractJsonPayload(payload.content?.[0]?.text), 'AI scan: Anthropic BYOK');
 }
 
 async function runAPIAnalysis(brandContext, demographics, campaignCopy, sensitivity, apiKey) {
   const prompt = buildSystemPrompt(brandContext, demographics, campaignCopy, sensitivity);
   const provider = detectProvider(apiKey);
-
-  if (provider === 'openrouter' || provider === 'unknown') {
-    return runOpenRouterAnalysis(apiKey, prompt);
-  }
-  if (provider === 'openai') {
-    return runOpenAIAnalysis(apiKey, prompt);
-  }
-  if (provider === 'anthropic') {
-    return runAnthropicAnalysis(apiKey, prompt);
-  }
+  if (provider === 'openrouter' || provider === 'unknown') return runOpenRouterAnalysis(apiKey, prompt);
+  if (provider === 'openai') return runOpenAIAnalysis(apiKey, prompt);
+  if (provider === 'anthropic') return runAnthropicAnalysis(apiKey, prompt);
   return runGoogleAnalysis(apiKey, prompt);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// POST-PROCESSING & CRITICAL GUARD
-// ═══════════════════════════════════════════════════════════════════════════════
-
 function runCriticalTermGuard(campaignCopy) {
   const t = campaignCopy.toLowerCase();
-
   const critical = [
     { tokens: ['mutthi maro'], score: 5, category: 'Explicit/Adult Content Brand Risk', rationale: 'Highly explicit regional sexual slang. Immediate withdrawal mandatory.' },
     { tokens: ['chut'], score: 5, category: 'Explicit/Adult Content Brand Risk', rationale: 'Extreme regional profanity. Maximum legal and reputational exposure.' },
@@ -352,7 +264,6 @@ function runCriticalTermGuard(campaignCopy) {
     { tokens: ['faad'], score: 10, category: 'Severe Profanity & Social Tone', rationale: 'Violently suggestive regional slang. Extreme reputational risk.' },
     { tokens: ['nude'], score: 12, category: 'Explicit/Adult Content Brand Risk', rationale: 'Sexually explicit keyword. Violates Google Ads / Meta Advertising Standards.' }
   ];
-
   for (const rule of critical) {
     if (rule.tokens.some(tok => t.includes(tok))) {
       const phrase = rule.tokens.find(tok => t.includes(tok));
@@ -364,7 +275,6 @@ function runCriticalTermGuard(campaignCopy) {
       };
     }
   }
-
   const profanities = ['fuck', 'f**k', 'f***', 'bhenchod', 'madarchod', 'bhosadike', 'bsdk', 'chutiya', 'randi', 'chamar'];
   for (const word of profanities) {
     if (t.includes(word)) {
@@ -376,7 +286,6 @@ function runCriticalTermGuard(campaignCopy) {
       };
     }
   }
-
   return null;
 }
 
@@ -384,7 +293,6 @@ function postProcessAnalysis(data, campaignCopy) {
   if (!data) return data;
   const textLower = campaignCopy.toLowerCase();
   const issues = data.flagged_issues || [];
-
   if (textLower.includes('sexy') || textLower.includes('adult')) {
     const word = textLower.includes('sexy') ? 'sexy' : 'adult';
     data.overall_score = Math.min(data.overall_score, 45);
@@ -393,69 +301,45 @@ function postProcessAnalysis(data, campaignCopy) {
     const payload = { phrase: word, category: 'Content Appropriateness Violation', rationale: `The term "${word}" is suggestive and requires legal sign-off before regional placement.` };
     if (existingIndex >= 0) issues[existingIndex] = payload; else issues.push(payload);
   }
-
-  // Calibrate: avoid 100 unless truly flawless
   if (Number(data.overall_score) === 100) {
     data.overall_score = 96;
     data.risk_level = 'Safe';
-    if (!data.summary.includes('96')) {
-      data.summary = data.summary.replace(/100/g, '96');
-    }
+    data.summary = data.summary.replace(/100/g, '96');
   }
-
   data.flagged_issues = issues;
   return data;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// OFFLINE RAG/HEURISTIC ENGINE (calibrated, believable, no hard 100)
-// ═══════════════════════════════════════════════════════════════════════════════
-
 function simulateOfflineAnalysis(brandContext, demographics, campaignCopy, sensitivity = 'Standard') {
   const guard = runCriticalTermGuard(campaignCopy);
   if (guard) return guard;
-
   const text = (brandContext + ' ' + campaignCopy).toLowerCase();
   const flagged = [];
   let deduction = 0;
   const multiplier = sensitivity === 'Maximum' ? 1.4 : sensitivity === 'Low' ? 0.6 : 1.0;
-
   const kb = window.BRANDCHECK_RAG_KB || { risk_patterns: [], case_studies: [] };
 
-  // RAG pattern matches
   for (const pattern of kb.risk_patterns || []) {
     const triggers = Array.isArray(pattern.triggers) ? pattern.triggers : [];
     for (const trigger of triggers) {
       if (text.includes(trigger.toLowerCase())) {
-        flagged.push({
-          phrase: trigger,
-          category: pattern.category,
-          rationale: `${pattern.rationale} Real precedent: ${pattern.precedent}.`
-        });
+        flagged.push({ phrase: trigger, category: pattern.category, rationale: `${pattern.rationale} Real precedent: ${pattern.precedent}.` });
         deduction += Math.round(pattern.score_impact * multiplier);
         break;
       }
     }
   }
-
-  // Case-study narrative matches (broader semantic triggers)
   for (const cs of kb.case_studies || []) {
     const narrative = (cs.narrative_signals || []).join(' ').toLowerCase();
     const tokens = narrative.split(/\s+/).filter(w => w.length > 4);
     for (const token of tokens) {
       if (text.includes(token)) {
-        flagged.push({
-          phrase: token,
-          category: cs.category,
-          rationale: `Echoes the ${cs.brand} case: ${cs.lesson}`
-        });
+        flagged.push({ phrase: token, category: cs.category, rationale: `Echoes the ${cs.brand} case: ${cs.lesson}` });
         deduction += Math.round(8 * multiplier);
         break;
       }
     }
   }
-
-  // Hard-coded keyword backstop for items not in RAG KB
   const keywordBackstop = [
     { kw: 'sacred', cat: 'Religious Sensitivity', reason: 'Mixing sacred concepts with consumer products is high-risk under festive marketing codes.', score: 18 },
     { kw: 'holy', cat: 'Religious Sensitivity', reason: 'Juxtaposing holy framing with commercial offers invites PR risk.', score: 18 },
@@ -473,31 +357,19 @@ function simulateOfflineAnalysis(brandContext, demographics, campaignCopy, sensi
     { kw: 'ch@mar', cat: 'Caste & Community Risk', reason: 'Obfuscated casteist slur.', score: 95 },
     { kw: 'boycott', cat: 'Political Neutrality', reason: 'Combative term associated with cancel culture and brand damage.', score: 20 }
   ];
-
   for (const rule of keywordBackstop) {
     if (text.includes(rule.kw)) {
-      const already = flagged.some(f => f.phrase.toLowerCase() === rule.kw);
-      if (!already) {
+      if (!flagged.some(f => f.phrase.toLowerCase() === rule.kw)) {
         flagged.push({ phrase: rule.kw, category: rule.cat, rationale: rule.reason });
         deduction += Math.round(rule.score * multiplier);
       }
     }
   }
-
-  // Contextual boosts for combinations
-  const hasReligious = flagged.some(f => f.category === 'Religious Sensitivity');
-  const hasPolitical = flagged.some(f => f.category === 'Political Neutrality');
-  const hasCaste = flagged.some(f => f.category.includes('Caste'));
-  if ((hasReligious && hasPolitical) || hasCaste) {
+  if ((flagged.some(f => f.category === 'Religious Sensitivity') && flagged.some(f => f.category === 'Political Neutrality')) || flagged.some(f => f.category.includes('Caste'))) {
     deduction += 15;
   }
-
-  // Score calibration
   let finalScore = Math.max(100 - deduction, 5);
-  if (flagged.length === 0) {
-    // No hard 100: reserve a small margin for edge cases / human review
-    finalScore = 94;
-  }
+  if (flagged.length === 0) finalScore = 94;
 
   let riskLevel = 'Safe';
   if (finalScore < 40) riskLevel = 'Critical';
@@ -505,106 +377,53 @@ function simulateOfflineAnalysis(brandContext, demographics, campaignCopy, sensi
   else if (finalScore < 90) riskLevel = 'Caution';
 
   const summary = (() => {
-    if (finalScore >= 90) return `Offline screening found no high-friction signals. Score capped at ${finalScore}/100 because no automated scan can guarantee zero risk in India's diverse market; a final human review is still recommended before launch.`;
+    if (finalScore >= 90) return `Offline screening found no high-friction signals. Score capped at ${finalScore}/100 because no automated scan can guarantee zero risk in India's diverse market; a final human review is recommended before launch.`;
     if (finalScore >= 70) return `${flagged.length} caution-level signal(s) detected. The flagged elements may cause misinterpretation in specific Indian demographics. Refine before going live.`;
     if (finalScore >= 40) return `${flagged.length} high-risk pattern(s) identified. The copy contains language with documented PR-crisis potential in India. Immediate revision is strongly advised.`;
     return `${flagged.length} critical violation(s) detected. This copy contains language that poses severe legal, religious, or social harm risk in the Indian cultural context. Do NOT publish without complete revision and legal review.`;
   })();
 
-  return {
-    overall_score: finalScore,
-    risk_level: riskLevel,
-    summary,
-    flagged_issues: flagged,
-    engine: 'Offline RAG/Heuristic Engine'
-  };
+  return { overall_score: finalScore, risk_level: riskLevel, summary, flagged_issues: flagged, engine: 'Offline Heuristic Engine' };
 }
 
-// Legacy alias used by some pages
 function localHeuristicEngine(brandContext, demographics, campaignCopy, sensitivity = 'Standard') {
   return simulateOfflineAnalysis(brandContext, demographics, campaignCopy, sensitivity);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// GATEWAY HELPERS
-// ═══════════════════════════════════════════════════════════════════════════════
-
 async function callSecureGateway(endpoint, body) {
   const headers = { 'Content-Type': 'application/json' };
   const signedInUser = (typeof getAuthUser === 'function') ? getAuthUser() : null;
-  if (signedInUser?.credential) {
-    headers['X-BrandCheck-Auth'] = signedInUser.credential;
-  }
-  if (SUPABASE_EDGE_FUNCTION && SUPABASE_ANON_KEY) {
-    headers['Authorization'] = `Bearer ${SUPABASE_ANON_KEY}`;
-  }
+  if (signedInUser?.credential) headers['X-BrandCheck-Auth'] = signedInUser.credential;
   const res = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(body) });
   if (!res.ok) throw new Error(`Gateway HTTP ${res.status}`);
   return res.json();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MAIN EXECUTION BROKER
-// ═══════════════════════════════════════════════════════════════════════════════
-
 async function executeComplianceCheck(brandContext, demographics, campaignCopy, sensitivity = 'Standard') {
-  console.log('[BrandCheck Pro] Executing validation workflow...');
+  const byokKey = localStorage.getItem('BC_LIVE_CORE_KEY') || '';
+  const body = { text: campaignCopy, brand_context: brandContext, demographics, sensitivity };
 
-  const byokKey =
-    localStorage.getItem('BC_LIVE_CORE_KEY') ||
-    localStorage.getItem('BC_PRO_LIVE_KEY') ||
-    localStorage.getItem('BC_PRO_API_KEY') ||
-    sessionStorage.getItem('BC_LIVE_CORE_KEY') ||
-    sessionStorage.getItem('BC_PRO_LIVE_KEY') ||
-    sessionStorage.getItem('BC_PRO_API_KEY') ||
-    '';
-
-  const body = {
-    text: campaignCopy,
-    market: demographics || 'IN-NAT',
-    brand_context: brandContext,
-    demographics: demographics,
-    sensitivity: sensitivity
-  };
-
-  // 1) Secure edge gateway (Supabase / Vercel function) — hides API keys server-side
-  const edgeEndpoint = SUPABASE_EDGE_FUNCTION || (ENGINE_CONFIG.api_endpoint ? ENGINE_CONFIG.api_endpoint : null);
-  if (edgeEndpoint) {
+  // Prioritize Cloud Supabase Edge Function Endpoint
+  if (SUPABASE_EDGE_FUNCTION) {
     try {
-      const data = await callSecureGateway(edgeEndpoint, body);
-      console.log('[BrandCheck Pro] Edge gateway result:', data);
+      const data = await callSecureGateway(SUPABASE_EDGE_FUNCTION, body);
       return postProcessAnalysis(normalizeAnalysisPayload(data, 'Live AI Pipeline: Secure Edge Gateway'), campaignCopy);
     } catch (err) {
-      console.warn('[BrandCheck Pro] Edge gateway unreachable:', err.message);
+      console.warn('[BrandCheck Pro] Edge gateway unreachable, attempting fallbacks:', err.message);
     }
   }
 
-  // 2) Backend gateway — hides operator-paid keys
-  if (!byokKey && BACKEND_URL) {
-    try {
-      const data = await callSecureGateway(`${BACKEND_URL}/v1/analyze`, body);
-      console.log('[BrandCheck Pro] Backend gateway result:', data);
-      return postProcessAnalysis(normalizeAnalysisPayload(data, data.engine || 'Live AI Pipeline: Backend Gateway'), campaignCopy);
-    } catch (err) {
-      console.warn('[BrandCheck Pro] Backend gateway unreachable:', err.message);
-    }
-  }
-
-  // 3) BYOK direct routes
+  // BYOK client-side route fallback
   if (byokKey) {
     try {
       const data = await runAPIAnalysis(brandContext, demographics, campaignCopy, sensitivity, byokKey);
       return postProcessAnalysis(data, campaignCopy);
     } catch (err) {
-      console.warn('[BrandCheck Pro] Live AI failed, falling back to offline engine:', err.message);
-      const offline = simulateOfflineAnalysis(brandContext, demographics, campaignCopy, sensitivity);
-      offline.isOfflineFallback = true;
-      offline.summary = `[Live AI temporarily unavailable — offline fallback active] ${offline.summary}`;
-      return offline;
+      console.warn('[BrandCheck Pro] BYOK direct route failed:', err.message);
     }
   }
 
-  // 4) Fully offline fallback
+  // Fully offline fallback
   const offlineData = simulateOfflineAnalysis(brandContext, demographics, campaignCopy, sensitivity);
   offlineData.isOfflineFallback = true;
   return offlineData;
@@ -634,9 +453,9 @@ function brandCheckApp() {
     premiumGateModal: false,
     sarcasmFilterEnabled: false,
     brandContext: '',
-    demographics: 'Whole India Market',
     campaignCopy: '',
     selectedEngine: 'tier1',
+    demographics: 'Whole India',
     sensitivity: 'Standard',
     showResults: false,
     results: { overall_score: 94, risk_level: 'Safe', summary: 'System operational.', flagged_issues: [] },
@@ -702,7 +521,7 @@ function brandCheckApp() {
       window.dispatchEvent(new CustomEvent('bc:tier:upgrade', { detail: 'Professional' }));
       this.premiumGateModal = false;
       this.inferenceStatus = '✦ Professional Tier Activated';
-      setTimeout(() => { this.inferenceStatus = 'Inference Core Ready'; }, 3500);
+      setTimeout(() => { this.inferenceStatus = 'Ready'; }, 3500);
     },
 
     tryToggleSarcasm() {
@@ -737,20 +556,21 @@ function brandCheckApp() {
     renderHighlightedSlogan() {
       let text = this.campaignCopy;
       if (!text) return '<span class="text-slate-500 italic">No copy entered yet.</span>';
-      if (!this.results || !this.results.flagged_issues || this.results.flagged_issues.length === 0) {
-        return text;
-      }
+      if (!this.results || !this.results.flagged_issues || this.results.flagged_issues.length === 0) return text;
+      
       const sortedIssues = [...this.results.flagged_issues].sort((a, b) => b.phrase.length - a.phrase.length);
       sortedIssues.forEach(issue => {
         const word = issue.phrase;
         if (!word) return;
         const escapedWord = word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
         const regex = new RegExp(`(${escapedWord})`, 'gi');
-        const isCritical = this.results.overall_score <= 30 || issue.category.toLowerCase().includes('profanity') || issue.category.toLowerCase().includes('vulgar') || issue.rationale.toLowerCase().includes('critical') || issue.phrase.toLowerCase().includes('nude');
+        const isCritical = this.results.overall_score <= 30 || issue.category.toLowerCase().includes('profanity') || issue.category.toLowerCase().includes('vulgar');
         const isCaution = this.results.overall_score <= 50 || this.results.risk_level === 'Caution' || issue.category.toLowerCase().includes('appropriateness');
+        
         let highlightClass = 'text-brandNeon font-semibold border-b border-dashed border-brandNeon/50 hover:text-brandNeon/80 cursor-help transition';
         if (isCritical) highlightClass = 'text-red-500 font-extrabold border-b-2 border-dashed border-red-500 hover:text-red-400 cursor-help transition';
         else if (isCaution) highlightClass = 'text-amber-500 font-bold border-b border-dashed border-amber-500 hover:text-amber-400 cursor-help transition';
+        
         text = text.replace(regex, `<span class="${highlightClass}" title="${issue.category}: ${issue.rationale.replace(/"/g, '&quot;')}">$1</span>`);
       });
       return text;
@@ -758,12 +578,7 @@ function brandCheckApp() {
 
     async runComplianceCheck() {
       if (!this.campaignCopy.trim()) {
-        this.results = {
-          overall_score: 0,
-          risk_level: 'API Error',
-          summary: 'Please enter your ad or slogan before scanning.',
-          flagged_issues: []
-        };
+        this.results = { overall_score: 0, risk_level: 'API Error', summary: 'Please enter your ad or slogan before scanning.', flagged_issues: [] };
         this.engineUsed = 'Validation';
         this.showResults = true;
         return;
@@ -775,24 +590,24 @@ function brandCheckApp() {
 
       try {
         const data = await executeComplianceCheck(this.brandContext, this.demographics, this.campaignCopy, this.sensitivity);
-        this.results = data || {
-          overall_score: 0,
-          risk_level: 'API Error',
-          summary: 'The scan returned no data. Check your API key and try again.',
-          flagged_issues: []
+        
+        this.results = {
+          overall_score: data.overall_score !== undefined ? data.overall_score : 100,
+          risk_level: data.risk_level || 'Safe',
+          summary: data.summary || '',
+          flagged_issues: data.flagged_issues || []
         };
-        this.engineUsed = data?.engine || (data?.isOfflineFallback ? 'Built-in scan' : 'AI scan');
-        this.inferenceStatus = data?.isOfflineFallback
-          ? 'Offline scan active'
-          : (this.cloudEngineKey ? 'AI connected' : 'Ready');
-      } catch (err) {
-        console.error('[BrandCheck Pro] Fatal execution error:', err);
+
+        this.engineUsed = data.isOfflineFallback ? 'Built-in scan' : (this.cloudEngineKey ? 'AI connected' : 'AI scan');
+        this.inferenceStatus = data.isOfflineFallback ? 'Offline scan active' : (this.cloudEngineKey ? 'AI connected' : 'Ready');
+      } catch (error) {
+        console.error('[BrandCheck Pro] Fatal execution error:', error);
         this.inferenceStatus = 'Scan error';
         this.results = {
           overall_score: 0,
-          risk_level: 'API Error',
-          summary: `Scan could not be completed. ${err.message || 'Please try again.'}`,
-          flagged_issues: []
+          risk_level: 'Error',
+          summary: 'Failed to complete cloud synchronization routine.',
+          flagged_issues: [{ id: 1, message: error.message || 'Unknown network error.' }]
         };
       } finally {
         this.loader = false;
