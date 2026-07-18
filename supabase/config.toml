@@ -1,0 +1,9 @@
+# Supabase project configuration for BrandCheck Pro.
+project_id = "BrandCheckPro"
+
+# quick-endpoint is called directly from the browser. Platform JWT
+# verification is disabled because the function enforces its own policy:
+# per-IP daily quota for anonymous visitors, Google ID-token verification
+# for signed-in users, and provider keys stay server-side as secrets.
+[functions.quick-endpoint]
+verify_jwt = false

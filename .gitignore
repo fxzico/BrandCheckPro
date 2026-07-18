@@ -31,3 +31,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Supabase CLI local state
+supabase/.temp/

@@ -7,8 +7,10 @@
 // BACKEND / EDGE GATEWAY CONFIGURATION
 // ═══════════════════════════════════════════════════════════════════════════════
 const BACKEND_URL = "";  
-const SUPABASE_EDGE_FUNCTION = "https://oplmhoyvflujrulkrawj.supabase.co/functions/v1/quick-endpoint";  
-const SUPABASE_ANON_KEY = "";        
+const SUPABASE_EDGE_FUNCTION = "https://oplmhoyvflujrulkrawj.supabase.co/functions/v1/quick-endpoint";
+// Public anon key from Supabase Dashboard → Settings → API. Safe to ship in the
+// frontend; required so the edge gateway accepts browser requests.
+const SUPABASE_ANON_KEY = "";
 
 const OR_MODEL_POOL = [
   "openrouter/auto",
@@ -392,10 +394,20 @@ function localHeuristicEngine(brandContext, demographics, campaignCopy, sensitiv
 
 async function callSecureGateway(endpoint, body) {
   const headers = { 'Content-Type': 'application/json' };
+  if (SUPABASE_ANON_KEY) {
+    headers['Authorization'] = `Bearer ${SUPABASE_ANON_KEY}`;
+    headers['apikey'] = SUPABASE_ANON_KEY;
+  }
   const signedInUser = (typeof getAuthUser === 'function') ? getAuthUser() : null;
   if (signedInUser?.credential) headers['X-BrandCheck-Auth'] = signedInUser.credential;
   const res = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(body) });
-  if (!res.ok) throw new Error(`Gateway HTTP ${res.status}`);
+  if (!res.ok) {
+    let payload = null;
+    try { payload = await res.json(); } catch (_) { /* non-JSON error body */ }
+    const err = new Error(payload?.detail || payload?.error || `Gateway HTTP ${res.status}`);
+    err.limitReached = res.status === 429 || payload?.limit_reached === true;
+    throw err;
+  }
   return res.json();
 }
 
@@ -407,12 +419,18 @@ async function executeComplianceCheck(brandContext, demographics, campaignCopy, 
 };
 
   // Prioritize Cloud Supabase Edge Function Endpoint
+  let limitReached = false;
   if (SUPABASE_EDGE_FUNCTION) {
     try {
       const data = await callSecureGateway(SUPABASE_EDGE_FUNCTION, body);
-      return postProcessAnalysis(normalizeAnalysisPayload(data, 'Live AI Pipeline: Secure Edge Gateway'), campaignCopy);
+      return postProcessAnalysis(normalizeAnalysisPayload(data, data.engine || 'Live AI Pipeline: Secure Edge Gateway'), campaignCopy);
     } catch (err) {
-      console.warn('[BrandCheck Pro] Edge gateway unreachable, attempting fallbacks:', err.message);
+      limitReached = err.limitReached === true;
+      if (limitReached) {
+        console.info('[BrandCheck Pro] Free daily AI scan limit reached; using fallbacks.');
+      } else {
+        console.warn('[BrandCheck Pro] Edge gateway unreachable, attempting fallbacks:', err.message);
+      }
     }
   }
 
@@ -429,6 +447,10 @@ async function executeComplianceCheck(brandContext, demographics, campaignCopy, 
   // Fully offline fallback
   const offlineData = simulateOfflineAnalysis(brandContext, demographics, campaignCopy, sensitivity);
   offlineData.isOfflineFallback = true;
+  if (limitReached) {
+    offlineData.limitReached = true;
+    offlineData.summary = `Free daily AI scan limit reached — this result is from the built-in offline screening engine. Sign in for unlimited AI scans. ${offlineData.summary}`;
+  }
   return offlineData;
 }
 
@@ -601,8 +623,13 @@ function brandCheckApp() {
           flagged_issues: data.flagged_issues || []
         };
 
-        this.engineUsed = data.isOfflineFallback ? 'Built-in scan' : (this.cloudEngineKey ? 'AI connected' : 'AI scan');
-        this.inferenceStatus = data.isOfflineFallback ? 'Offline scan active' : (this.cloudEngineKey ? 'AI connected' : 'Ready');
+        if (data.isOfflineFallback) {
+          this.engineUsed = 'Built-in scan';
+          this.inferenceStatus = data.limitReached ? 'Daily free AI limit reached — sign in for unlimited' : 'Offline scan active';
+        } else {
+          this.engineUsed = data.engine || (this.cloudEngineKey ? 'AI connected' : 'AI scan');
+          this.inferenceStatus = 'AI connected';
+        }
       } catch (error) {
         console.error('[BrandCheck Pro] Fatal execution error:', error);
         this.inferenceStatus = 'Scan error';
