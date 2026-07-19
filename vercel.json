@@ -1,11 +1,5 @@
 {
   "redirects": [
-    {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "www.brandcheckpro.in" }],
-      "destination": "https://brandcheckpro.in/:path*",
-      "permanent": true
-    },
     { "source": "/blog-seo-optimized.html", "destination": "/blog.html", "permanent": true },
     { "source": "/blog/index.html", "destination": "/blog.html", "permanent": true },
     { "source": "/blog/seo-optimized/:path*", "destination": "/blog.html", "permanent": true }
