@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="canonical" href="https://brandcheckpro.in/blog.html">
   <title>Brand Stories — The BrandCheck Journal</title>
+  <meta name="description" content="Brand crisis case studies and post-mortems: real Indian ad controversies analyzed for cultural, religious, and political risk lessons.">
   
   <script>
     (function() {
@@ -18,7 +20,7 @@
 
   <!-- CSS Assets -->
   <link rel="stylesheet" href="assets/css/custom.css">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="assets/css/tailwind.css">
   <!-- Google Sign-In SDK & Auth Utility -->
   <script src="assets/js/auth.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -26,27 +28,10 @@
   <script src="assets/js/sandbox.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
   
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brandBgDark: '#0B0F19',
-            brandSurfaceDark: '#1E293B',
-            brandBgLight: '#F8FAFC',
-            brandSurfaceLight: '#FFFFFF',
-            brandNeon: '#38BDF8',
-            brandBlue: '#2563EB',
-          }
-        }
-      }
-    }
-  </script>
 
   <!-- Browser Tab Favicon Configurations -->
   <link rel="icon" type="image/svg+xml" href="assets/images/logo-light-mode.svg" />
-  <link rel="alternate icon" type="image/png" href="assets/images/favicon.png" />
+
 </head>
 <body 
   class="transition-colors duration-200 font-sans antialiased min-h-screen flex flex-col" 
@@ -60,7 +45,6 @@
         darkMode: localStorage.getItem('theme') ? (localStorage.getItem('theme') === 'dark') : window.matchMedia('(prefers-color-scheme: dark)').matches, 
         selectedCategory: 'all', 
         searchQuery: '', 
-        isLoading: false,
         privacyModal: false,
         connectionModal: false,
         cloudEngineKey: localStorage.getItem('BC_LIVE_CORE_KEY') || '',
@@ -90,336 +74,18 @@
             window.dispatchEvent(new CustomEvent('gauth:logout'));
           }
         },
-        articles: [
-          {
-            id: 1,
-            title: 'The Anatomy of a Modern Ad Recall: What Copywriters Can Learn',
-            category: 'case-studies',
-            categoryLabel: 'Case Study Matrix',
-            summary: 'Explore the structured computational limits separating clever creative wordplay from highly critical cultural fault line exposure inside localized consumer spaces.',
-            readTime: '5 Min Read',
-            image: 'assets/images/blog_featured_graphic.png',
-            url: 'blog/post-mortem-01.html',
-            featured: true
-          },
-          {
-            id: 2,
-            title: 'Case Study: Tanishq Ekatvam Campaign Controversy (2020)',
-            category: 'case-studies',
-            categoryLabel: 'Case Studies',
-            summary: 'Linguistic review mapping the critical metric variances separating acceptable festive copy from structural PR backlash risks in the 2020 Tanishq Ekatvam campaign.',
-            readTime: '6 Min Read',
-            image: null,
-            url: 'blog/tanishq-ekatvam-campaign-controversy-2020.html',
-            featured: false
-          },
-          {
-            id: 101,
-            shortTitle: 'Tanishq Ekatvam Controversy',
-            title: 'Tanishq Ekatvam Campaign Controversy: Marketing Campaign Failure Case Study 2024',
-            category: 'case-studies',
-            categoryLabel: 'Case Study',
-            summary: 'Deep analysis of India\'s biggest inter-faith advertising controversy. Why the Tanishq Ekatvam ad sparked nationwide boycott and what brand managers can learn.',
-            readTime: '8 Min Read',
-            image: 'assets/images/blog/Tanishq Ekatvam Campaign Controversy.webp',
-            url: 'blog/tanishq-ekatvam-interfaith-ad-campaign-failure-case-study.html',
-            featured: true,
-            date: '2024-01-15',
-            keywords: ['Tanishq controversy', 'inter-faith advertising', 'marketing failure', 'brand crisis']
-          },
-          {
-            id: 102,
-            shortTitle: 'Zomato Kachra Backlash',
-            title: 'Zomato Kachra Campaign Controversy: Caste Sensitivity in Advertising Case Study',
-            category: 'case-studies',
-            categoryLabel: 'Case Study',
-            summary: 'How Zomato\'s recycling campaign using "Kachra" character from Lagaan triggered severe caste sensitivity backlash. Analysis of metaphorical failures.',
-            readTime: '7 Min Read',
-            image: 'assets/images/blog/Zomato Kachra Campaign.jfif',
-            url: 'blog/zomato-kachra-recycling-campaign-backlash-analysis.html',
-            featured: true,
-            date: '2024-01-20',
-            keywords: ['Zomato controversy', 'caste sensitivity', 'advertising metaphors', 'Kachra campaign']
-          },
-          {
-            id: 103,
-            shortTitle: 'FabIndia Jashn-e-Riwaaz',
-            title: 'FabIndia Jashn-e-Riwaaz Controversy: Linguistic Risk in Festive Marketing Case Study',
-            category: 'case-studies',
-            categoryLabel: 'Case Study',
-            summary: 'Why FabIndia\'s use of Urdu phrase for Diwali triggered boycott calls. Case study on language choice, cultural expectations, and religious sensitivity.',
-            readTime: '6 Min Read',
-            image: 'assets/images/blog/FabIndia Jashn-e-Riwaaz.avif',
-            url: 'blog/fabindia-jashn-e-riwaaz-cultural-controversy-breakdown.html',
-            featured: true,
-            date: '2024-02-01',
-            keywords: ['FabIndia controversy', 'Urdu Hindi language', 'Diwali marketing', 'cultural sensitivity']
-          },
-          {
-            id: 104,
-            shortTitle: 'Manyavar Kanyamaan',
-            title: 'Manyavar Kanyamaan Campaign: Hindu Wedding Ritual Controversy Case Study',
-            category: 'cultural-safety',
-            categoryLabel: 'Cultural Safety',
-            summary: 'Analysis of Manyavar\'s campaign challenging Kanyadaan ritual. How progressive intent met traditional resistance in Indian wedding marketing.',
-            readTime: '7 Min Read',
-            image: 'assets/images/blog/Manyavar Kanyamaan.jfif',
-            url: 'blog/manyavar-kanyamaan-ritual-subversion-case-study.html',
-            featured: true,
-            date: '2024-02-10',
-            keywords: ['Manyavar controversy', 'Kanyadaan ritual', 'Hindu wedding traditions', 'gender marketing']
-          },
-          {
-            id: 105,
-            shortTitle: 'Layer\'s Shot Ad Ban',
-            title: 'Layer\'s Shot Ad Ban: ASCI Indecent Advertising Case Study',
-            category: 'linguistic-risk',
-            categoryLabel: 'Regulatory Action',
-            summary: 'Complete breakdown of Layer\'s Shot perfume ad ban by ASCI. Why the campaign crossed decency boundaries and regulatory consequences.',
-            readTime: '6 Min Read',
-            image: 'assets/images/blog/Layer\'s Shot Ad Ban.jfif',
-            url: 'blog/layers-shot-ad-ban-indecent-advertising-case-study.html',
-            featured: true,
-            date: '2024-02-15',
-            keywords: ['Layers Shot ban', 'ASCI banned ads', 'indecent advertising', 'regulatory action']
-          },
-          {
-            id: 3,
-            title: 'Case Study: Manyavar Kanyamaan Campaign Controversy (2021)',
-            category: 'case-studies',
-            categoryLabel: 'Case Studies',
-            summary: 'Linguistic review mapping the critical metric variances separating acceptable festive copy from structural PR backlash risks in the 2021 Manyavar Kanyamaan campaign.',
-            readTime: '5 Min Read',
-            image: null,
-            url: 'blog/manyavar-kanyamaan-campaign-controversy-2021.html',
-            featured: false
-          },
-          {
-            id: 4,
-            title: 'Case Study: Zomato Kachra Campaign Controversy (2023)',
-            category: 'case-studies',
-            categoryLabel: 'Case Studies',
-            summary: 'Linguistic review mapping the critical metric variances separating acceptable festive copy from structural PR backlash risks in the 2023 Zomato Kachra campaign.',
-            readTime: '4 Min Read',
-            image: null,
-            url: 'blog/zomato-kachra-campaign-controversy-2023.html',
-            featured: false
-          },
-          {
-            id: 5,
-            title: 'Case Study: Zomato MC/BC Acronym Controversy (2017)',
-            category: 'linguistic-risk',
-            categoryLabel: 'Linguistic Risk',
-            summary: 'An analysis of Zomato’s outdoor campaign featuring abbreviations of highly offensive Hindi expletives.',
-            readTime: '4 Min Read',
-            image: null,
-            url: 'blog/zomato-acronym-controversy-2017.html',
-            featured: false
-          },
-          {
-            id: 6,
-            title: 'Case Study: Kent RO Domestic Workers Stigmatization (2020)',
-            category: 'cultural-safety',
-            categoryLabel: 'Cultural Safety',
-            summary: 'How an ad for a bread maker stigmatized domestic workers as potential infection vectors.',
-            readTime: '5 Min Read',
-            image: null,
-            url: 'blog/kent-ro-classism-controversy-2020.html',
-            featured: false
-          },
-          {
-            id: 7,
-            title: 'Case Study: FabIndia Urdu Festive Phrasing Backlash (2021)',
-            category: 'cultural-safety',
-            categoryLabel: 'Cultural Safety',
-            summary: 'A look at the controversy over FabIndia using the Urdu phrase "Jashn-e-Riwaaz" to describe a Hindu festive collection.',
-            readTime: '5 Min Read',
-            image: null,
-            url: 'blog/fabindia-urdu-phrasing-2021.html',
-            featured: false
-          },
-          {
-            id: 8,
-            title: 'Case Study: Mohey Hindu Ritual Subversion Debate (2021)',
-            category: 'cultural-safety',
-            categoryLabel: 'Cultural Safety',
-            summary: 'Deconstructing the backlash against Manyavar Mohey’s creative decision to challenge the Kanyadaan ritual.',
-            readTime: '5 Min Read',
-            image: null,
-            url: 'blog/mohey-ritual-subversion-2021.html',
-            featured: false
-          },
-          {
-            id: 9,
-            title: 'Case Study: Dabur Fem Same-Sex Karwa Chauth Ad Controversy (2021)',
-            category: 'linguistic-risk',
-            categoryLabel: 'Linguistic Risk',
-            summary: 'Examining the progressive synthesis failure of a same-sex Karwa Chauth narrative for a bleach brand.',
-            readTime: '5 Min Read',
-            image: null,
-            url: 'blog/dabur-fem-same-sex-karwa-chauth-2021.html',
-            featured: false
-          },
-          {
-            id: 10,
-            title: 'Case Study: Sabyasachi Mangalsutra Eroticized Depiction Backlash (2021)',
-            category: 'linguistic-risk',
-            categoryLabel: 'Linguistic Risk',
-            summary: 'How the luxury designer’s promotional campaign for a Mangalsutra triggered legal threats and boycott calls.',
-            readTime: '5 Min Read',
-            image: null,
-            url: 'blog/sabyasachi-mangalsutra-ad-controversy-2021.html',
-            featured: false
-          },
-          {
-            id: 11,
-            title: 'Case Study: Layer\'s Shot Predatory Indecency Ad Ban (2022)',
-            category: 'linguistic-risk',
-            categoryLabel: 'Linguistic Risk',
-            summary: 'An assessment of the extreme backlash and regulatory ban triggered by Layer’s Shot advertisements simulating gang-rape scenarios.',
-            readTime: '5 Min Read',
-            image: null,
-            url: 'blog/layers-shot-rape-controversy-2022.html',
-            featured: false
-          },
-          {
-            id: 12,
-            title: 'Case Study: Vim Black Failed Satire & Gender Stereotyping (2022)',
-            category: 'cultural-safety',
-            categoryLabel: 'Cultural Safety',
-            summary: 'Deconstructing the failed satire of Vim Black’s campaign and the ensuing gender segregation debate.',
-            readTime: '4 Min Read',
-            image: null,
-            url: 'blog/vim-failed-satire-controversy-2022.html',
-            featured: false
-          },
-          {
-            id: 13,
-            title: 'Case Study: Swiggy Holi Advertisement Contestation (2023)',
-            category: 'cultural-safety',
-            categoryLabel: 'Cultural Safety',
-            summary: 'Analyzing Swiggy’s billboard campaign instructing behavioral changes during Holi and the resulting backlash.',
-            readTime: '5 Min Read',
-            image: null,
-            url: 'blog/swiggy-holi-advertisement-2023.html',
-            featured: false
-          },
-          {
-            id: 14,
-            title: 'Case Study: YesMadam Faked Layoffs Viral Stunt (2024)',
-            category: 'linguistic-risk',
-            categoryLabel: 'Linguistic Risk',
-            summary: 'A look at the professional trust deficit created when YesMadam staged fake mass layoffs as a marketing stunt.',
-            readTime: '4 Min Read',
-            image: null,
-            url: 'blog/yesmadam-faked-layoffs-2024.html',
-            featured: false
-          },
-          {
-            id: 15,
-            title: 'Case Study: Hauterfly Faked Death Awareness Controversy (2024)',
-            category: 'linguistic-risk',
-            categoryLabel: 'Linguistic Risk',
-            summary: 'How staging a celebrity’s fake death for awareness created massive trust deficits and business losses.',
-            readTime: '5 Min Read',
-            image: null,
-            url: 'blog/hauterfly-unethical-deception-2024.html',
-            featured: false
-          },
-          {
-            id: 16,
-            title: 'Case Study: Zomato Pure Veg Fleet & Sociological Segregation (2024)',
-            category: 'cultural-safety',
-            categoryLabel: 'Cultural Safety',
-            summary: 'Analyzing the physical and linguistic segregation controversy of Zomato’s "Pure Veg Fleet" launch.',
-            readTime: '5 Min Read',
-            image: null,
-            url: 'blog/zomato-pure-veg-fleet-2024.html',
-            featured: false
-          },
-          {
-            id: 17,
-            title: 'Case Study: Prada Kolhapuri Design Appropriation (2024)',
-            category: 'cultural-safety',
-            categoryLabel: 'Cultural Safety',
-            summary: 'Evaluating the digital PR backlash Prada faced for selling traditional Kolhapuri sandals with no cultural attribution.',
-            readTime: '4 Min Read',
-            image: null,
-            url: 'blog/prada-kolhapuri-appropriation-2024.html',
-            featured: false
-          },
-          {
-            id: 18,
-            title: 'Case Study: OYO God Placement & Spiritual Misappropriation (2025)',
-            category: 'cultural-safety',
-            categoryLabel: 'Cultural Safety',
-            summary: 'An analysis of OYO’s marketing campaign equating divine intervention with hotel bookings.',
-            readTime: '4 Min Read',
-            image: null,
-            url: 'blog/oyo-spiritual-misappropriation-2025.html',
-            featured: false
-          },
-          {
-            id: 19,
-            title: 'Case Study: Dabur Geopolitical Opportunism Marketing (2025)',
-            category: 'linguistic-risk',
-            categoryLabel: 'Linguistic Risk',
-            summary: 'Analyzing the professional polarization triggered by Dabur’s anti-US geopolitical messaging stunt.',
-            readTime: '4 Min Read',
-            image: null,
-            url: 'blog/dabur-geopolitical-opportunism-2025.html',
-            featured: false
-          },
-          {
-            id: 20,
-            title: 'Case Study: Fenty Beauty Indian Localization Mismatch (2025)',
-            category: 'cultural-safety',
-            categoryLabel: 'Cultural Safety',
-            summary: 'How a lack of local cultural grounding and context-aware marketing created criticism during Fenty Beauty’s India launch.',
-            readTime: '4 Min Read',
-            image: null,
-            url: 'blog/fenty-beauty-localization-failure-2025.html',
-            featured: false
-          },
-          {
-            id: 21,
-            title: 'Case Study: Patanjali Competitor Injunction Controversy (2025)',
-            category: 'linguistic-risk',
-            categoryLabel: 'Linguistic Risk',
-            summary: 'How labeling competitors as "dhoka" led to a Delhi High Court injunction and severe corporate legal damage.',
-            readTime: '5 Min Read',
-            image: null,
-            url: 'blog/patanjali-legal-denigration-2025.html',
-            featured: false
-          },
-          {
-            id: 22,
-            title: 'Case Study: Star Sports Rivalry Belittling Backlash (2026)',
-            category: 'cultural-safety',
-            categoryLabel: 'Cultural Safety',
-            summary: 'How belittling international sports rivals in promos turned an aggressive marketing angle into global humiliation.',
-            readTime: '4 Min Read',
-            image: null,
-            url: 'blog/star-sports-rivalry-mockery-2026.html',
-            featured: false
-          }
-        ],
-        filterArticles() {
-          this.isLoading = true;
-          setTimeout(() => { this.isLoading = false; }, 400);
+        cardVisible(el) {
+          const byCategory = this.selectedCategory === 'all' || el.dataset.category === this.selectedCategory;
+          const byQuery = el.dataset.search.includes(this.searchQuery.toLowerCase());
+          return byCategory && byQuery;
         },
-        get filteredList() {
-          return this.articles.filter(article => {
-            const matchesCategory = this.selectedCategory === 'all' || article.category === this.selectedCategory;
-            const matchesQuery = article.title.toLowerCase().includes(this.searchQuery.toLowerCase()) || 
-                                 article.summary.toLowerCase().includes(this.searchQuery.toLowerCase());
-            return matchesCategory && matchesQuery;
-          });
+        get anyVisible() {
+          this.selectedCategory; this.searchQuery;
+          return this.$refs.grid && [...this.$refs.grid.children].some(el => this.cardVisible(el));
         }
       }));
     });
   </script>
->
 
   <!-- Global Banner Notice -->
   <div class="bg-brandBlue text-white text-center py-2.5 px-4 text-xs font-semibold tracking-wide border-b border-blue-700/50">
@@ -527,7 +193,7 @@
           { id: 'linguistic-risk', label: 'Linguistic' },
           { id: 'cultural-safety', label: 'Cultural Safety' }
         ]">
-          <button @click="selectedCategory = cat.id; filterArticles()"
+          <button @click="selectedCategory = cat.id"
                   :class="selectedCategory === cat.id ? 'bg-brandBlue text-white border-brandBlue' : (darkMode ? 'text-slate-300 bg-brandSurfaceDark/30 border-slate-800 hover:border-slate-700' : 'text-slate-600 bg-white border-slate-200 hover:border-slate-300')"
                   class="px-4 py-1.5 rounded-full text-xs font-medium border transition duration-200"
                   x-text="cat.label">
@@ -550,91 +216,535 @@
       </div>
     </div>
 
-    <!-- Loading Shimmer State -->
-    <template x-if="isLoading">
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div class="md:col-span-3 glass-card rounded-xl p-6 flex flex-col md:flex-row gap-6">
-          <div class="w-full md:w-2/5 h-48 shimmer-mask rounded-lg"></div>
-          <div class="flex-grow space-y-4 py-2">
-            <div class="h-4 w-1/4 shimmer-mask rounded"></div>
-            <div class="h-8 w-3/4 shimmer-mask rounded"></div>
-            <div class="h-4 w-5/6 shimmer-mask rounded"></div>
-          </div>
-        </div>
-      </div>
-    </template>
+    <!-- Article Grid — static HTML so crawlers index every card and link -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" x-ref="grid">
 
-    <!-- Content Rendering State -->
-    <template x-if="!isLoading">
-      <div>
-        <!-- Zero Results Screen -->
-        <template x-if="filteredList.length === 0">
-          <div class="text-center py-16 border rounded-xl bg-slate-950/20" :class="darkMode ? 'border-slate-800' : 'border-slate-200'">
-            <svg class="mx-auto h-12 w-12 text-slate-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            <h3 class="text-sm font-bold text-slate-300">No Articles Match Your Query</h3>
-            <p class="text-slate-500 text-xs mt-1">Try adapting your filters or search keywords.</p>
-          </div>
-        </template>
-
-        <!-- Bento Grid Framework -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          
-          <!-- FEATURED CARD -->
-          <template x-for="article in filteredList.filter(a => a.featured)">
-            <article class="md:col-span-2 lg:col-span-3 glass-card rounded-xl p-6 flex flex-col md:flex-row gap-6 relative overflow-hidden group">
-              <!-- Graphic Preview -->
-              <div class="w-full md:w-2/5 h-52 overflow-hidden rounded-lg border border-slate-800 flex-shrink-0 bg-slate-900">
-                <img :src="article.image" 
-                     :alt="article.title"
-                     class="w-full h-full object-cover group-hover:scale-102 transition duration-300 opacity-95 group-hover:opacity-100">
-              </div>
-              <!-- Content -->
-              <div class="flex-grow flex flex-col justify-between py-1">
-                <div>
-                  <div class="flex items-center justify-between mb-3">
-                    <span class="text-xs text-brandNeon font-mono font-bold uppercase tracking-wider" x-text="article.categoryLabel"></span>
-                    <span class="text-slate-500 text-xs font-mono" x-text="article.readTime"></span>
-                  </div>
-                  <h2 class="font-display text-2xl font-bold mb-3 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
-                    <a :href="article.url" x-text="article.title"></a>
-                  </h2>
-                  <p class="text-xs md:text-sm leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'" x-text="article.summary"></p>
-                </div>
-                <div>
-                  <a :href="article.url" class="inline-flex items-center gap-1.5 text-xs font-semibold text-brandNeon group-hover:underline">
-                    Read Narrative Analysis &rarr;
-                  </a>
-                </div>
-              </div>
-            </article>
-          </template>
-
-          <!-- SECONDARY CARDS -->
-          <template x-for="article in filteredList.filter(a => !a.featured)">
-            <article class="glass-card rounded-xl p-5 flex flex-col justify-between group">
+          <article x-show="cardVisible($el)" data-category="case-studies" data-search="the anatomy of a modern ad recall: what copywriters can learn explore the structured computational limits separating clever creative wordplay from highly critical cultural fault line exposure inside localized consumer spaces." class="md:col-span-2 lg:col-span-3 glass-card rounded-xl p-6 flex flex-col md:flex-row gap-6 relative overflow-hidden group">
+            <div class="w-full md:w-2/5 h-52 overflow-hidden rounded-lg border border-slate-800 flex-shrink-0 bg-slate-900">
+              <img src="assets/images/blog_featured_graphic.png" alt="The Anatomy of a Modern Ad Recall: What Copywriters Can Learn" loading="lazy" class="w-full h-full object-cover group-hover:scale-102 transition duration-300 opacity-95 group-hover:opacity-100">
+            </div>
+            <div class="flex-grow flex flex-col justify-between py-1">
               <div>
                 <div class="flex items-center justify-between mb-3">
-                  <span class="text-xs text-brandNeon font-mono font-semibold uppercase tracking-wider" x-text="article.categoryLabel"></span>
-                  <span class="text-slate-500 text-xs font-mono" x-text="article.readTime"></span>
+                  <span class="text-xs text-brandNeon font-mono font-bold uppercase tracking-wider">Case Study Matrix</span>
+                  <span class="text-slate-500 text-xs font-mono">5 Min Read</span>
                 </div>
-                <h3 class="font-display text-lg font-bold mb-2 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
-                  <a :href="article.url" x-text="article.title"></a>
-                </h3>
-                <p class="text-xs leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'" x-text="article.summary"></p>
+                <h2 class="font-display text-2xl font-bold mb-3 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                  <a href="blog/post-mortem-01.html">The Anatomy of a Modern Ad Recall: What Copywriters Can Learn</a>
+                </h2>
+                <p class="text-xs md:text-sm leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Explore the structured computational limits separating clever creative wordplay from highly critical cultural fault line exposure inside localized consumer spaces.</p>
               </div>
-              <div class="pt-4 border-t border-slate-800/40">
-                <a :href="article.url" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 group-hover:text-brandNeon transition duration-150">
-                  Analyze Failure Matrix &rarr;
+              <div>
+                <a href="blog/post-mortem-01.html" class="inline-flex items-center gap-1.5 text-xs font-semibold text-brandNeon group-hover:underline">
+                  Read Narrative Analysis &rarr;
                 </a>
               </div>
-            </article>
-          </template>
+            </div>
+          </article>
 
-        </div>
-      </div>
-    </template>
+          <article x-show="cardVisible($el)" data-category="case-studies" data-search="tanishq ekatvam campaign controversy: marketing campaign failure case study deep analysis of india's biggest inter-faith advertising controversy. why the tanishq ekatvam ad sparked nationwide boycott and what brand managers can learn." class="md:col-span-2 lg:col-span-3 glass-card rounded-xl p-6 flex flex-col md:flex-row gap-6 relative overflow-hidden group">
+            <div class="w-full md:w-2/5 h-52 overflow-hidden rounded-lg border border-slate-800 flex-shrink-0 bg-slate-900">
+              <img src="assets/images/blog/tanishq-ekatvam.webp" alt="Tanishq Ekatvam Campaign Controversy: Marketing Campaign Failure Case Study" loading="lazy" class="w-full h-full object-cover group-hover:scale-102 transition duration-300 opacity-95 group-hover:opacity-100">
+            </div>
+            <div class="flex-grow flex flex-col justify-between py-1">
+              <div>
+                <div class="flex items-center justify-between mb-3">
+                  <span class="text-xs text-brandNeon font-mono font-bold uppercase tracking-wider">Case Study</span>
+                  <span class="text-slate-500 text-xs font-mono">8 Min Read</span>
+                </div>
+                <h2 class="font-display text-2xl font-bold mb-3 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                  <a href="blog/tanishq-ekatvam-interfaith-ad-campaign-failure-case-study.html">Tanishq Ekatvam Campaign Controversy: Marketing Campaign Failure Case Study</a>
+                </h2>
+                <p class="text-xs md:text-sm leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Deep analysis of India's biggest inter-faith advertising controversy. Why the Tanishq Ekatvam ad sparked nationwide boycott and what brand managers can learn.</p>
+              </div>
+              <div>
+                <a href="blog/tanishq-ekatvam-interfaith-ad-campaign-failure-case-study.html" class="inline-flex items-center gap-1.5 text-xs font-semibold text-brandNeon group-hover:underline">
+                  Read Narrative Analysis &rarr;
+                </a>
+              </div>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="case-studies" data-search="zomato kachra campaign controversy: caste sensitivity in advertising case study how zomato's recycling campaign using &quot;kachra&quot; character from lagaan triggered severe caste sensitivity backlash. analysis of metaphorical failures." class="md:col-span-2 lg:col-span-3 glass-card rounded-xl p-6 flex flex-col md:flex-row gap-6 relative overflow-hidden group">
+            <div class="w-full md:w-2/5 h-52 overflow-hidden rounded-lg border border-slate-800 flex-shrink-0 bg-slate-900">
+              <img src="assets/images/blog/zomato-kachra.jpg" alt="Zomato Kachra Campaign Controversy: Caste Sensitivity in Advertising Case Study" loading="lazy" class="w-full h-full object-cover group-hover:scale-102 transition duration-300 opacity-95 group-hover:opacity-100">
+            </div>
+            <div class="flex-grow flex flex-col justify-between py-1">
+              <div>
+                <div class="flex items-center justify-between mb-3">
+                  <span class="text-xs text-brandNeon font-mono font-bold uppercase tracking-wider">Case Study</span>
+                  <span class="text-slate-500 text-xs font-mono">7 Min Read</span>
+                </div>
+                <h2 class="font-display text-2xl font-bold mb-3 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                  <a href="blog/zomato-kachra-recycling-campaign-backlash-analysis.html">Zomato Kachra Campaign Controversy: Caste Sensitivity in Advertising Case Study</a>
+                </h2>
+                <p class="text-xs md:text-sm leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">How Zomato's recycling campaign using &quot;Kachra&quot; character from Lagaan triggered severe caste sensitivity backlash. Analysis of metaphorical failures.</p>
+              </div>
+              <div>
+                <a href="blog/zomato-kachra-recycling-campaign-backlash-analysis.html" class="inline-flex items-center gap-1.5 text-xs font-semibold text-brandNeon group-hover:underline">
+                  Read Narrative Analysis &rarr;
+                </a>
+              </div>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="case-studies" data-search="fabindia jashn-e-riwaaz controversy: linguistic risk in festive marketing case study why fabindia's use of urdu phrase for diwali triggered boycott calls. case study on language choice, cultural expectations, and religious sensitivity." class="md:col-span-2 lg:col-span-3 glass-card rounded-xl p-6 flex flex-col md:flex-row gap-6 relative overflow-hidden group">
+            <div class="w-full md:w-2/5 h-52 overflow-hidden rounded-lg border border-slate-800 flex-shrink-0 bg-slate-900">
+              <img src="assets/images/blog/fabindia-jashn-e-riwaaz.avif" alt="FabIndia Jashn-e-Riwaaz Controversy: Linguistic Risk in Festive Marketing Case Study" loading="lazy" class="w-full h-full object-cover group-hover:scale-102 transition duration-300 opacity-95 group-hover:opacity-100">
+            </div>
+            <div class="flex-grow flex flex-col justify-between py-1">
+              <div>
+                <div class="flex items-center justify-between mb-3">
+                  <span class="text-xs text-brandNeon font-mono font-bold uppercase tracking-wider">Case Study</span>
+                  <span class="text-slate-500 text-xs font-mono">6 Min Read</span>
+                </div>
+                <h2 class="font-display text-2xl font-bold mb-3 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                  <a href="blog/fabindia-jashn-e-riwaaz-cultural-controversy-breakdown.html">FabIndia Jashn-e-Riwaaz Controversy: Linguistic Risk in Festive Marketing Case Study</a>
+                </h2>
+                <p class="text-xs md:text-sm leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Why FabIndia's use of Urdu phrase for Diwali triggered boycott calls. Case study on language choice, cultural expectations, and religious sensitivity.</p>
+              </div>
+              <div>
+                <a href="blog/fabindia-jashn-e-riwaaz-cultural-controversy-breakdown.html" class="inline-flex items-center gap-1.5 text-xs font-semibold text-brandNeon group-hover:underline">
+                  Read Narrative Analysis &rarr;
+                </a>
+              </div>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="cultural-safety" data-search="manyavar kanyamaan campaign: hindu wedding ritual controversy case study analysis of manyavar's campaign challenging kanyadaan ritual. how progressive intent met traditional resistance in indian wedding marketing." class="md:col-span-2 lg:col-span-3 glass-card rounded-xl p-6 flex flex-col md:flex-row gap-6 relative overflow-hidden group">
+            <div class="w-full md:w-2/5 h-52 overflow-hidden rounded-lg border border-slate-800 flex-shrink-0 bg-slate-900">
+              <img src="assets/images/blog/manyavar-kanyamaan.jpg" alt="Manyavar Kanyamaan Campaign: Hindu Wedding Ritual Controversy Case Study" loading="lazy" class="w-full h-full object-cover group-hover:scale-102 transition duration-300 opacity-95 group-hover:opacity-100">
+            </div>
+            <div class="flex-grow flex flex-col justify-between py-1">
+              <div>
+                <div class="flex items-center justify-between mb-3">
+                  <span class="text-xs text-brandNeon font-mono font-bold uppercase tracking-wider">Cultural Safety</span>
+                  <span class="text-slate-500 text-xs font-mono">7 Min Read</span>
+                </div>
+                <h2 class="font-display text-2xl font-bold mb-3 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                  <a href="blog/manyavar-kanyamaan-ritual-subversion-case-study.html">Manyavar Kanyamaan Campaign: Hindu Wedding Ritual Controversy Case Study</a>
+                </h2>
+                <p class="text-xs md:text-sm leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Analysis of Manyavar's campaign challenging Kanyadaan ritual. How progressive intent met traditional resistance in Indian wedding marketing.</p>
+              </div>
+              <div>
+                <a href="blog/manyavar-kanyamaan-ritual-subversion-case-study.html" class="inline-flex items-center gap-1.5 text-xs font-semibold text-brandNeon group-hover:underline">
+                  Read Narrative Analysis &rarr;
+                </a>
+              </div>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="linguistic-risk" data-search="layer's shot ad ban: asci indecent advertising case study complete breakdown of layer's shot perfume ad ban by asci. why the campaign crossed decency boundaries and regulatory consequences." class="md:col-span-2 lg:col-span-3 glass-card rounded-xl p-6 flex flex-col md:flex-row gap-6 relative overflow-hidden group">
+            <div class="w-full md:w-2/5 h-52 overflow-hidden rounded-lg border border-slate-800 flex-shrink-0 bg-slate-900">
+              <img src="assets/images/blog/layers-shot-ad-ban.jpg" alt="Layer's Shot Ad Ban: ASCI Indecent Advertising Case Study" loading="lazy" class="w-full h-full object-cover group-hover:scale-102 transition duration-300 opacity-95 group-hover:opacity-100">
+            </div>
+            <div class="flex-grow flex flex-col justify-between py-1">
+              <div>
+                <div class="flex items-center justify-between mb-3">
+                  <span class="text-xs text-brandNeon font-mono font-bold uppercase tracking-wider">Regulatory Action</span>
+                  <span class="text-slate-500 text-xs font-mono">6 Min Read</span>
+                </div>
+                <h2 class="font-display text-2xl font-bold mb-3 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                  <a href="blog/layers-shot-ad-ban-indecent-advertising-case-study.html">Layer's Shot Ad Ban: ASCI Indecent Advertising Case Study</a>
+                </h2>
+                <p class="text-xs md:text-sm leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Complete breakdown of Layer's Shot perfume ad ban by ASCI. Why the campaign crossed decency boundaries and regulatory consequences.</p>
+              </div>
+              <div>
+                <a href="blog/layers-shot-ad-ban-indecent-advertising-case-study.html" class="inline-flex items-center gap-1.5 text-xs font-semibold text-brandNeon group-hover:underline">
+                  Read Narrative Analysis &rarr;
+                </a>
+              </div>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="case-studies" data-search="case study: tanishq ekatvam campaign controversy (2020) linguistic review mapping the critical metric variances separating acceptable festive copy from structural pr backlash risks in the 2020 tanishq ekatvam campaign." class="glass-card rounded-xl p-5 flex flex-col justify-between group">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-brandNeon font-mono font-semibold uppercase tracking-wider">Case Studies</span>
+                <span class="text-slate-500 text-xs font-mono">6 Min Read</span>
+              </div>
+              <h3 class="font-display text-lg font-bold mb-2 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                <a href="blog/tanishq-ekatvam-campaign-controversy-2020.html">Case Study: Tanishq Ekatvam Campaign Controversy (2020)</a>
+              </h3>
+              <p class="text-xs leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Linguistic review mapping the critical metric variances separating acceptable festive copy from structural PR backlash risks in the 2020 Tanishq Ekatvam campaign.</p>
+            </div>
+            <div class="pt-4 border-t border-slate-800/40">
+              <a href="blog/tanishq-ekatvam-campaign-controversy-2020.html" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 group-hover:text-brandNeon transition duration-150">
+                Analyze Failure Matrix &rarr;
+              </a>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="case-studies" data-search="case study: manyavar kanyamaan campaign controversy (2021) linguistic review mapping the critical metric variances separating acceptable festive copy from structural pr backlash risks in the 2021 manyavar kanyamaan campaign." class="glass-card rounded-xl p-5 flex flex-col justify-between group">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-brandNeon font-mono font-semibold uppercase tracking-wider">Case Studies</span>
+                <span class="text-slate-500 text-xs font-mono">5 Min Read</span>
+              </div>
+              <h3 class="font-display text-lg font-bold mb-2 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                <a href="blog/manyavar-kanyamaan-campaign-controversy-2021.html">Case Study: Manyavar Kanyamaan Campaign Controversy (2021)</a>
+              </h3>
+              <p class="text-xs leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Linguistic review mapping the critical metric variances separating acceptable festive copy from structural PR backlash risks in the 2021 Manyavar Kanyamaan campaign.</p>
+            </div>
+            <div class="pt-4 border-t border-slate-800/40">
+              <a href="blog/manyavar-kanyamaan-campaign-controversy-2021.html" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 group-hover:text-brandNeon transition duration-150">
+                Analyze Failure Matrix &rarr;
+              </a>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="case-studies" data-search="case study: zomato kachra campaign controversy (2023) linguistic review mapping the critical metric variances separating acceptable festive copy from structural pr backlash risks in the 2023 zomato kachra campaign." class="glass-card rounded-xl p-5 flex flex-col justify-between group">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-brandNeon font-mono font-semibold uppercase tracking-wider">Case Studies</span>
+                <span class="text-slate-500 text-xs font-mono">4 Min Read</span>
+              </div>
+              <h3 class="font-display text-lg font-bold mb-2 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                <a href="blog/zomato-kachra-campaign-controversy-2023.html">Case Study: Zomato Kachra Campaign Controversy (2023)</a>
+              </h3>
+              <p class="text-xs leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Linguistic review mapping the critical metric variances separating acceptable festive copy from structural PR backlash risks in the 2023 Zomato Kachra campaign.</p>
+            </div>
+            <div class="pt-4 border-t border-slate-800/40">
+              <a href="blog/zomato-kachra-campaign-controversy-2023.html" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 group-hover:text-brandNeon transition duration-150">
+                Analyze Failure Matrix &rarr;
+              </a>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="linguistic-risk" data-search="case study: zomato mc/bc acronym controversy (2017) an analysis of zomato’s outdoor campaign featuring abbreviations of highly offensive hindi expletives." class="glass-card rounded-xl p-5 flex flex-col justify-between group">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-brandNeon font-mono font-semibold uppercase tracking-wider">Linguistic Risk</span>
+                <span class="text-slate-500 text-xs font-mono">4 Min Read</span>
+              </div>
+              <h3 class="font-display text-lg font-bold mb-2 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                <a href="blog/zomato-acronym-controversy-2017.html">Case Study: Zomato MC/BC Acronym Controversy (2017)</a>
+              </h3>
+              <p class="text-xs leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">An analysis of Zomato’s outdoor campaign featuring abbreviations of highly offensive Hindi expletives.</p>
+            </div>
+            <div class="pt-4 border-t border-slate-800/40">
+              <a href="blog/zomato-acronym-controversy-2017.html" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 group-hover:text-brandNeon transition duration-150">
+                Analyze Failure Matrix &rarr;
+              </a>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="cultural-safety" data-search="case study: kent ro domestic workers stigmatization (2020) how an ad for a bread maker stigmatized domestic workers as potential infection vectors." class="glass-card rounded-xl p-5 flex flex-col justify-between group">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-brandNeon font-mono font-semibold uppercase tracking-wider">Cultural Safety</span>
+                <span class="text-slate-500 text-xs font-mono">5 Min Read</span>
+              </div>
+              <h3 class="font-display text-lg font-bold mb-2 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                <a href="blog/kent-ro-classism-controversy-2020.html">Case Study: Kent RO Domestic Workers Stigmatization (2020)</a>
+              </h3>
+              <p class="text-xs leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">How an ad for a bread maker stigmatized domestic workers as potential infection vectors.</p>
+            </div>
+            <div class="pt-4 border-t border-slate-800/40">
+              <a href="blog/kent-ro-classism-controversy-2020.html" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 group-hover:text-brandNeon transition duration-150">
+                Analyze Failure Matrix &rarr;
+              </a>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="cultural-safety" data-search="case study: fabindia urdu festive phrasing backlash (2021) a look at the controversy over fabindia using the urdu phrase &quot;jashn-e-riwaaz&quot; to describe a hindu festive collection." class="glass-card rounded-xl p-5 flex flex-col justify-between group">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-brandNeon font-mono font-semibold uppercase tracking-wider">Cultural Safety</span>
+                <span class="text-slate-500 text-xs font-mono">5 Min Read</span>
+              </div>
+              <h3 class="font-display text-lg font-bold mb-2 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                <a href="blog/fabindia-urdu-phrasing-2021.html">Case Study: FabIndia Urdu Festive Phrasing Backlash (2021)</a>
+              </h3>
+              <p class="text-xs leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">A look at the controversy over FabIndia using the Urdu phrase &quot;Jashn-e-Riwaaz&quot; to describe a Hindu festive collection.</p>
+            </div>
+            <div class="pt-4 border-t border-slate-800/40">
+              <a href="blog/fabindia-urdu-phrasing-2021.html" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 group-hover:text-brandNeon transition duration-150">
+                Analyze Failure Matrix &rarr;
+              </a>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="cultural-safety" data-search="case study: mohey hindu ritual subversion debate (2021) deconstructing the backlash against manyavar mohey’s creative decision to challenge the kanyadaan ritual." class="glass-card rounded-xl p-5 flex flex-col justify-between group">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-brandNeon font-mono font-semibold uppercase tracking-wider">Cultural Safety</span>
+                <span class="text-slate-500 text-xs font-mono">5 Min Read</span>
+              </div>
+              <h3 class="font-display text-lg font-bold mb-2 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                <a href="blog/mohey-ritual-subversion-2021.html">Case Study: Mohey Hindu Ritual Subversion Debate (2021)</a>
+              </h3>
+              <p class="text-xs leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Deconstructing the backlash against Manyavar Mohey’s creative decision to challenge the Kanyadaan ritual.</p>
+            </div>
+            <div class="pt-4 border-t border-slate-800/40">
+              <a href="blog/mohey-ritual-subversion-2021.html" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 group-hover:text-brandNeon transition duration-150">
+                Analyze Failure Matrix &rarr;
+              </a>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="linguistic-risk" data-search="case study: dabur fem same-sex karwa chauth ad controversy (2021) examining the progressive synthesis failure of a same-sex karwa chauth narrative for a bleach brand." class="glass-card rounded-xl p-5 flex flex-col justify-between group">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-brandNeon font-mono font-semibold uppercase tracking-wider">Linguistic Risk</span>
+                <span class="text-slate-500 text-xs font-mono">5 Min Read</span>
+              </div>
+              <h3 class="font-display text-lg font-bold mb-2 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                <a href="blog/dabur-fem-same-sex-karwa-chauth-2021.html">Case Study: Dabur Fem Same-Sex Karwa Chauth Ad Controversy (2021)</a>
+              </h3>
+              <p class="text-xs leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Examining the progressive synthesis failure of a same-sex Karwa Chauth narrative for a bleach brand.</p>
+            </div>
+            <div class="pt-4 border-t border-slate-800/40">
+              <a href="blog/dabur-fem-same-sex-karwa-chauth-2021.html" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 group-hover:text-brandNeon transition duration-150">
+                Analyze Failure Matrix &rarr;
+              </a>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="linguistic-risk" data-search="case study: sabyasachi mangalsutra eroticized depiction backlash (2021) how the luxury designer’s promotional campaign for a mangalsutra triggered legal threats and boycott calls." class="glass-card rounded-xl p-5 flex flex-col justify-between group">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-brandNeon font-mono font-semibold uppercase tracking-wider">Linguistic Risk</span>
+                <span class="text-slate-500 text-xs font-mono">5 Min Read</span>
+              </div>
+              <h3 class="font-display text-lg font-bold mb-2 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                <a href="blog/sabyasachi-mangalsutra-ad-controversy-2021.html">Case Study: Sabyasachi Mangalsutra Eroticized Depiction Backlash (2021)</a>
+              </h3>
+              <p class="text-xs leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">How the luxury designer’s promotional campaign for a Mangalsutra triggered legal threats and boycott calls.</p>
+            </div>
+            <div class="pt-4 border-t border-slate-800/40">
+              <a href="blog/sabyasachi-mangalsutra-ad-controversy-2021.html" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 group-hover:text-brandNeon transition duration-150">
+                Analyze Failure Matrix &rarr;
+              </a>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="linguistic-risk" data-search="case study: layer's shot predatory indecency ad ban (2022) an assessment of the extreme backlash and regulatory ban triggered by layer’s shot advertisements simulating gang-rape scenarios." class="glass-card rounded-xl p-5 flex flex-col justify-between group">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-brandNeon font-mono font-semibold uppercase tracking-wider">Linguistic Risk</span>
+                <span class="text-slate-500 text-xs font-mono">5 Min Read</span>
+              </div>
+              <h3 class="font-display text-lg font-bold mb-2 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                <a href="blog/layers-shot-rape-controversy-2022.html">Case Study: Layer's Shot Predatory Indecency Ad Ban (2022)</a>
+              </h3>
+              <p class="text-xs leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">An assessment of the extreme backlash and regulatory ban triggered by Layer’s Shot advertisements simulating gang-rape scenarios.</p>
+            </div>
+            <div class="pt-4 border-t border-slate-800/40">
+              <a href="blog/layers-shot-rape-controversy-2022.html" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 group-hover:text-brandNeon transition duration-150">
+                Analyze Failure Matrix &rarr;
+              </a>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="cultural-safety" data-search="case study: vim black failed satire &amp; gender stereotyping (2022) deconstructing the failed satire of vim black’s campaign and the ensuing gender segregation debate." class="glass-card rounded-xl p-5 flex flex-col justify-between group">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-brandNeon font-mono font-semibold uppercase tracking-wider">Cultural Safety</span>
+                <span class="text-slate-500 text-xs font-mono">4 Min Read</span>
+              </div>
+              <h3 class="font-display text-lg font-bold mb-2 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                <a href="blog/vim-failed-satire-controversy-2022.html">Case Study: Vim Black Failed Satire &amp; Gender Stereotyping (2022)</a>
+              </h3>
+              <p class="text-xs leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Deconstructing the failed satire of Vim Black’s campaign and the ensuing gender segregation debate.</p>
+            </div>
+            <div class="pt-4 border-t border-slate-800/40">
+              <a href="blog/vim-failed-satire-controversy-2022.html" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 group-hover:text-brandNeon transition duration-150">
+                Analyze Failure Matrix &rarr;
+              </a>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="cultural-safety" data-search="case study: swiggy holi advertisement contestation (2023) analyzing swiggy’s billboard campaign instructing behavioral changes during holi and the resulting backlash." class="glass-card rounded-xl p-5 flex flex-col justify-between group">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-brandNeon font-mono font-semibold uppercase tracking-wider">Cultural Safety</span>
+                <span class="text-slate-500 text-xs font-mono">5 Min Read</span>
+              </div>
+              <h3 class="font-display text-lg font-bold mb-2 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                <a href="blog/swiggy-holi-advertisement-2023.html">Case Study: Swiggy Holi Advertisement Contestation (2023)</a>
+              </h3>
+              <p class="text-xs leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Analyzing Swiggy’s billboard campaign instructing behavioral changes during Holi and the resulting backlash.</p>
+            </div>
+            <div class="pt-4 border-t border-slate-800/40">
+              <a href="blog/swiggy-holi-advertisement-2023.html" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 group-hover:text-brandNeon transition duration-150">
+                Analyze Failure Matrix &rarr;
+              </a>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="linguistic-risk" data-search="case study: yesmadam faked layoffs viral stunt (2024) a look at the professional trust deficit created when yesmadam staged fake mass layoffs as a marketing stunt." class="glass-card rounded-xl p-5 flex flex-col justify-between group">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-brandNeon font-mono font-semibold uppercase tracking-wider">Linguistic Risk</span>
+                <span class="text-slate-500 text-xs font-mono">4 Min Read</span>
+              </div>
+              <h3 class="font-display text-lg font-bold mb-2 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                <a href="blog/yesmadam-faked-layoffs-2024.html">Case Study: YesMadam Faked Layoffs Viral Stunt (2024)</a>
+              </h3>
+              <p class="text-xs leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">A look at the professional trust deficit created when YesMadam staged fake mass layoffs as a marketing stunt.</p>
+            </div>
+            <div class="pt-4 border-t border-slate-800/40">
+              <a href="blog/yesmadam-faked-layoffs-2024.html" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 group-hover:text-brandNeon transition duration-150">
+                Analyze Failure Matrix &rarr;
+              </a>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="linguistic-risk" data-search="case study: hauterfly faked death awareness controversy (2024) how staging a celebrity’s fake death for awareness created massive trust deficits and business losses." class="glass-card rounded-xl p-5 flex flex-col justify-between group">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-brandNeon font-mono font-semibold uppercase tracking-wider">Linguistic Risk</span>
+                <span class="text-slate-500 text-xs font-mono">5 Min Read</span>
+              </div>
+              <h3 class="font-display text-lg font-bold mb-2 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                <a href="blog/hauterfly-unethical-deception-2024.html">Case Study: Hauterfly Faked Death Awareness Controversy (2024)</a>
+              </h3>
+              <p class="text-xs leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">How staging a celebrity’s fake death for awareness created massive trust deficits and business losses.</p>
+            </div>
+            <div class="pt-4 border-t border-slate-800/40">
+              <a href="blog/hauterfly-unethical-deception-2024.html" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 group-hover:text-brandNeon transition duration-150">
+                Analyze Failure Matrix &rarr;
+              </a>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="cultural-safety" data-search="case study: zomato pure veg fleet &amp; sociological segregation (2024) analyzing the physical and linguistic segregation controversy of zomato’s &quot;pure veg fleet&quot; launch." class="glass-card rounded-xl p-5 flex flex-col justify-between group">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-brandNeon font-mono font-semibold uppercase tracking-wider">Cultural Safety</span>
+                <span class="text-slate-500 text-xs font-mono">5 Min Read</span>
+              </div>
+              <h3 class="font-display text-lg font-bold mb-2 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                <a href="blog/zomato-pure-veg-fleet-2024.html">Case Study: Zomato Pure Veg Fleet &amp; Sociological Segregation (2024)</a>
+              </h3>
+              <p class="text-xs leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Analyzing the physical and linguistic segregation controversy of Zomato’s &quot;Pure Veg Fleet&quot; launch.</p>
+            </div>
+            <div class="pt-4 border-t border-slate-800/40">
+              <a href="blog/zomato-pure-veg-fleet-2024.html" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 group-hover:text-brandNeon transition duration-150">
+                Analyze Failure Matrix &rarr;
+              </a>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="cultural-safety" data-search="case study: prada kolhapuri design appropriation (2024) evaluating the digital pr backlash prada faced for selling traditional kolhapuri sandals with no cultural attribution." class="glass-card rounded-xl p-5 flex flex-col justify-between group">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-brandNeon font-mono font-semibold uppercase tracking-wider">Cultural Safety</span>
+                <span class="text-slate-500 text-xs font-mono">4 Min Read</span>
+              </div>
+              <h3 class="font-display text-lg font-bold mb-2 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                <a href="blog/prada-kolhapuri-appropriation-2024.html">Case Study: Prada Kolhapuri Design Appropriation (2024)</a>
+              </h3>
+              <p class="text-xs leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Evaluating the digital PR backlash Prada faced for selling traditional Kolhapuri sandals with no cultural attribution.</p>
+            </div>
+            <div class="pt-4 border-t border-slate-800/40">
+              <a href="blog/prada-kolhapuri-appropriation-2024.html" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 group-hover:text-brandNeon transition duration-150">
+                Analyze Failure Matrix &rarr;
+              </a>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="cultural-safety" data-search="case study: oyo god placement &amp; spiritual misappropriation (2025) an analysis of oyo’s marketing campaign equating divine intervention with hotel bookings." class="glass-card rounded-xl p-5 flex flex-col justify-between group">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-brandNeon font-mono font-semibold uppercase tracking-wider">Cultural Safety</span>
+                <span class="text-slate-500 text-xs font-mono">4 Min Read</span>
+              </div>
+              <h3 class="font-display text-lg font-bold mb-2 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                <a href="blog/oyo-spiritual-misappropriation-2025.html">Case Study: OYO God Placement &amp; Spiritual Misappropriation (2025)</a>
+              </h3>
+              <p class="text-xs leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">An analysis of OYO’s marketing campaign equating divine intervention with hotel bookings.</p>
+            </div>
+            <div class="pt-4 border-t border-slate-800/40">
+              <a href="blog/oyo-spiritual-misappropriation-2025.html" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 group-hover:text-brandNeon transition duration-150">
+                Analyze Failure Matrix &rarr;
+              </a>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="linguistic-risk" data-search="case study: dabur geopolitical opportunism marketing (2025) analyzing the professional polarization triggered by dabur’s anti-us geopolitical messaging stunt." class="glass-card rounded-xl p-5 flex flex-col justify-between group">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-brandNeon font-mono font-semibold uppercase tracking-wider">Linguistic Risk</span>
+                <span class="text-slate-500 text-xs font-mono">4 Min Read</span>
+              </div>
+              <h3 class="font-display text-lg font-bold mb-2 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                <a href="blog/dabur-geopolitical-opportunism-2025.html">Case Study: Dabur Geopolitical Opportunism Marketing (2025)</a>
+              </h3>
+              <p class="text-xs leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">Analyzing the professional polarization triggered by Dabur’s anti-US geopolitical messaging stunt.</p>
+            </div>
+            <div class="pt-4 border-t border-slate-800/40">
+              <a href="blog/dabur-geopolitical-opportunism-2025.html" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 group-hover:text-brandNeon transition duration-150">
+                Analyze Failure Matrix &rarr;
+              </a>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="cultural-safety" data-search="case study: fenty beauty indian localization mismatch (2025) how a lack of local cultural grounding and context-aware marketing created criticism during fenty beauty’s india launch." class="glass-card rounded-xl p-5 flex flex-col justify-between group">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-brandNeon font-mono font-semibold uppercase tracking-wider">Cultural Safety</span>
+                <span class="text-slate-500 text-xs font-mono">4 Min Read</span>
+              </div>
+              <h3 class="font-display text-lg font-bold mb-2 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                <a href="blog/fenty-beauty-localization-failure-2025.html">Case Study: Fenty Beauty Indian Localization Mismatch (2025)</a>
+              </h3>
+              <p class="text-xs leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">How a lack of local cultural grounding and context-aware marketing created criticism during Fenty Beauty’s India launch.</p>
+            </div>
+            <div class="pt-4 border-t border-slate-800/40">
+              <a href="blog/fenty-beauty-localization-failure-2025.html" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 group-hover:text-brandNeon transition duration-150">
+                Analyze Failure Matrix &rarr;
+              </a>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="linguistic-risk" data-search="case study: patanjali competitor injunction controversy (2025) how labeling competitors as &quot;dhoka&quot; led to a delhi high court injunction and severe corporate legal damage." class="glass-card rounded-xl p-5 flex flex-col justify-between group">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-brandNeon font-mono font-semibold uppercase tracking-wider">Linguistic Risk</span>
+                <span class="text-slate-500 text-xs font-mono">5 Min Read</span>
+              </div>
+              <h3 class="font-display text-lg font-bold mb-2 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                <a href="blog/patanjali-legal-denigration-2025.html">Case Study: Patanjali Competitor Injunction Controversy (2025)</a>
+              </h3>
+              <p class="text-xs leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">How labeling competitors as &quot;dhoka&quot; led to a Delhi High Court injunction and severe corporate legal damage.</p>
+            </div>
+            <div class="pt-4 border-t border-slate-800/40">
+              <a href="blog/patanjali-legal-denigration-2025.html" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 group-hover:text-brandNeon transition duration-150">
+                Analyze Failure Matrix &rarr;
+              </a>
+            </div>
+          </article>
+
+          <article x-show="cardVisible($el)" data-category="cultural-safety" data-search="case study: star sports rivalry belittling backlash (2026) how belittling international sports rivals in promos turned an aggressive marketing angle into global humiliation." class="glass-card rounded-xl p-5 flex flex-col justify-between group">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-brandNeon font-mono font-semibold uppercase tracking-wider">Cultural Safety</span>
+                <span class="text-slate-500 text-xs font-mono">4 Min Read</span>
+              </div>
+              <h3 class="font-display text-lg font-bold mb-2 group-hover:text-brandNeon transition duration-200" :class="darkMode ? 'text-white' : 'text-slate-900'">
+                <a href="blog/star-sports-rivalry-mockery-2026.html">Case Study: Star Sports Rivalry Belittling Backlash (2026)</a>
+              </h3>
+              <p class="text-xs leading-relaxed mb-4" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">How belittling international sports rivals in promos turned an aggressive marketing angle into global humiliation.</p>
+            </div>
+            <div class="pt-4 border-t border-slate-800/40">
+              <a href="blog/star-sports-rivalry-mockery-2026.html" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 group-hover:text-brandNeon transition duration-150">
+                Analyze Failure Matrix &rarr;
+              </a>
+            </div>
+          </article>
+
+    </div>
+
+    <!-- Zero Results Screen -->
+    <div x-show="!anyVisible" x-cloak class="text-center py-16 border rounded-xl bg-slate-950/20" :class="darkMode ? 'border-slate-800' : 'border-slate-200'">
+      <svg class="mx-auto h-12 w-12 text-slate-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <h3 class="text-sm font-bold text-slate-300">No Articles Match Your Query</h3>
+      <p class="text-slate-500 text-xs mt-1">Try adapting your filters or search keywords.</p>
+    </div>
   </main>
 
   <!-- Global Footer -->

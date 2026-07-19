@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "brandcheckpro",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["-y", "serve", "-l", "8124", "."],
+      "port": 8124
+    }
+  ]
+}

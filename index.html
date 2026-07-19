@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="canonical" href="https://brandcheckpro.in/">
   <title>BrandCheck Pro — Catch Risky Copy Before It Goes Live</title>
   <meta name="description" content="Scan your ads and marketing copy for cultural, religious, and political risks in India. Free, private, no data saved.">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="assets/css/tailwind.css">
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
   <script>
     window.addEventListener('load', () => {
@@ -36,36 +37,9 @@
   <script src="assets/js/rag_kb.js"></script>
   <script src="assets/js/sandbox.js"></script>
 
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brandBgDark: '#0B0F19',
-            brandSurfaceDark: '#1E293B',
-            brandBgLight: '#F8FAFC',
-            brandSurfaceLight: '#FFFFFF',
-            brandNeon: '#38BDF8',
-            brandBlue: '#2563EB',
-          }
-        }
-      }
-    }
-  </script>
-
-  <script>
-    // PRODUCTION GATEWAY OVERRIDES
-    // Values in sandbox.js are defaults. Override them here for your deployed stack
-    // without touching the shared engine file.
-    // BACKEND_URL = "";  // e.g. "https://api.brandcheckpro.in" or "/api"
-    // SUPABASE_EDGE_FUNCTION = "";  // e.g. "https://<project>.supabase.co/functions/v1/analyze"
-    // SUPABASE_ANON_KEY = "";       // public anon key only; API secrets stay server-side
-  </script>
-
   <!-- Browser Tab Favicon Configurations -->
   <link rel="icon" type="image/svg+xml" href="assets/images/logo-light-mode.svg" />
-  <link rel="alternate icon" type="image/png" href="assets/images/favicon.png" />
+
 </head>
 <body class="transition-colors duration-200 font-sans antialiased min-h-screen flex flex-col"
       :class="darkMode ? 'dark bg-brandBgDark text-slate-100' : 'bg-brandBgLight text-slate-800'"

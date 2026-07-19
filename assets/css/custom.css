@@ -11,6 +11,9 @@
   --border-color: rgba(255, 255, 255, 0.05);
 }
 
+/* Hide Alpine-controlled elements until Alpine initializes */
+[x-cloak] { display: none !important; }
+
 /* Base Settings */
 body {
   font-family: 'Inter', sans-serif;
@@ -64,27 +67,6 @@ body:not(.dark) .text-slate-300 {
   color: #1e293b; /* map to text-slate-800 in light */
 }
 
-/* Light-mode action button — vibrant Cyber Blue gradient */
-.btn-primary-gradient {
-  background: linear-gradient(135deg, #2563EB 0%, #0284c7 60%, #38BDF8 100%);
-  color: #fff;
-  font-weight: 700;
-  border: none;
-  transition: opacity 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
-  box-shadow: 0 4px 14px -2px rgba(37, 99, 235, 0.35);
-}
-
-.btn-primary-gradient:hover {
-  opacity: 0.92;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px -2px rgba(37, 99, 235, 0.45);
-}
-
-.btn-primary-gradient:active {
-  transform: translateY(0);
-  opacity: 1;
-}
-
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Outfit', sans-serif;
 }
@@ -108,46 +90,6 @@ code, pre {
   transform: translateY(-2px);
 }
 
-/* ─── Micro-interaction Animations ──────────────────────────── */
-.interactive-transition {
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.focus-ring {
-  transition: box-shadow 0.2s ease;
-}
-
-.focus-ring:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.4);
-}
-
-/* ─── Shimmer Load States ────────────────────────────────────── */
-@keyframes shimmer {
-  100% { transform: translateX(100%); }
-}
-
-.shimmer-mask {
-  position: relative;
-  overflow: hidden;
-  background-color: rgba(51, 65, 85, 0.3);
-}
-
-.shimmer-mask::after {
-  position: absolute;
-  top: 0; right: 0; bottom: 0; left: 0;
-  transform: translateX(-100%);
-  background-image: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.03) 20%,
-    rgba(255, 255, 255, 0.08) 60%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  animation: shimmer 1.6s infinite;
-  content: '';
-}
-
 /* ─── Collapsible Transitions ────────────────────────────────── */
 .accordion-content {
   max-height: 0;
@@ -159,23 +101,6 @@ code, pre {
 .accordion-content.open {
   max-height: 500px;
   opacity: 1;
-}
-
-/* ─── Premium Tier Feature Gate Badge ───────────────────────── */
-.premium-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: linear-gradient(135deg, #d97706, #f59e0b);
-  color: #1c1917;
-  font-size: 9px;
-  font-weight: 800;
-  font-family: 'JetBrains Mono', monospace;
-  letter-spacing: 0.06em;
-  padding: 1px 7px;
-  border-radius: 9999px;
-  text-transform: uppercase;
-  vertical-align: middle;
 }
 
 /* ─── Fade-in Animation for Auth Modal ──────────────────────── */
